@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Misc">
+      <UniqueIdentifier>{320dcd33-a28e-4ab4-a2ab-f70d5d8789be}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="filename.I" />
+    <None Include="globPattern.I" />
+    <None Include="ocSearchPath.I" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="check_include.cxx" />
+    <ClCompile Include="executionEnvironment.cxx" />
+    <ClCompile Include="filename.cxx" />
+    <ClCompile Include="globPattern.cxx" />
+    <ClCompile Include="gnu_getopt.c" />
+    <ClCompile Include="gnu_regex.c" />
+    <ClCompile Include="isSpace.cxx" />
+    <ClCompile Include="md5.c" />
+    <ClCompile Include="ocCommandFile.cxx" />
+    <ClCompile Include="ocDependableFile.cxx" />
+    <ClCompile Include="ocDirectory.cxx" />
+    <ClCompile Include="ocDirectoryTree.cxx" />
+    <ClCompile Include="ocFilenamePattern.cxx" />
+    <ClCompile Include="ocMain.cxx" />
+    <ClCompile Include="ocNamedScopes.cxx" />
+    <ClCompile Include="oconfig.cxx" />
+    <ClCompile Include="ocProfileInfo.cxx" />
+    <ClCompile Include="ocScope.cxx" />
+    <ClCompile Include="ocSearchPath.cxx" />
+    <ClCompile Include="ocSubroutine.cxx" />
+    <ClCompile Include="sedAddress.cxx" />
+    <ClCompile Include="sedCommand.cxx" />
+    <ClCompile Include="sedContext.cxx" />
+    <ClCompile Include="sedProcess.cxx" />
+    <ClCompile Include="sedScript.cxx" />
+    <ClCompile Include="tokenize.cxx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="check_include.h" />
+    <ClInclude Include="config_msvc.h" />
+    <ClInclude Include="executionEnvironment.h" />
+    <ClInclude Include="filename.h" />
+    <ClInclude Include="globPattern.h" />
+    <ClInclude Include="gnu_getopt.h" />
+    <ClInclude Include="gnu_regex.h" />
+    <ClInclude Include="isSpace.h" />
+    <ClInclude Include="md5.h" />
+    <ClInclude Include="ocCommandFile.h" />
+    <ClInclude Include="ocDependableFile.h" />
+    <ClInclude Include="ocDirectory.h" />
+    <ClInclude Include="ocDirectoryTree.h" />
+    <ClInclude Include="ocFilenamePattern.h" />
+    <ClInclude Include="ocMain.h" />
+    <ClInclude Include="ocNamedScopes.h" />
+    <ClInclude Include="oconfig.h" />
+    <ClInclude Include="ocProfileInfo.h" />
+    <ClInclude Include="ocScope.h" />
+    <ClInclude Include="ocSearchPath.h" />
+    <ClInclude Include="ocSubroutine.h" />
+    <ClInclude Include="sedAddress.h" />
+    <ClInclude Include="sedCommand.h" />
+    <ClInclude Include="sedContext.h" />
+    <ClInclude Include="sedProcess.h" />
+    <ClInclude Include="sedScript.h" />
+    <ClInclude Include="tokenize.h" />
+    <ClInclude Include="vector_string.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuildStep Include="..\..\tool\oconfig\oconfig.sln.vs2008">
+      <Filter>Misc</Filter>
+    </CustomBuildStep>
+    <CustomBuildStep Include="..\..\tool\oconfig\oconfig.vcproj.vs2008">
+      <Filter>Misc</Filter>
+    </CustomBuildStep>
+  </ItemGroup>
+</Project>

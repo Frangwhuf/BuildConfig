@@ -1,0 +1,6 @@
+// This is a project directory.  DIR_TYPE src is implicit
+
+#begin bin_target
+  #define TARGET oconfig
+  #define NEED_EXCEPTIONS 1
+#end bin_target

@@ -1,0 +1,22 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "oconfig", "oconfig.vcproj", "{68592F14-7228-3CF6-273E-85B455E6BD2C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		debug|Win32 = debug|Win32
+		qa|Win32 = qa|Win32
+		release|Win32 = release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.debug|Win32.ActiveCfg = debug|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.debug|Win32.Build.0 = debug|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.qa|Win32.ActiveCfg = qa|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.qa|Win32.Build.0 = qa|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.release|Win32.ActiveCfg = release|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.release|Win32.Build.0 = release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
