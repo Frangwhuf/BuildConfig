@@ -1,0 +1,156 @@
+//
+// Template.toplevel.bld
+//
+// This file defines the set of output files that will be generated to
+// support a makefile build system for unix.
+//
+// Before this file is processed, the following files are read and
+// processed (in order):
+//
+// The Depot.bld file in the root of the current source hierarchy
+//   (e.g. C:\o\trunk\olive\Depot.bld)
+// <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
+// <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)
+// The user's OCONFIG_CONFIG file. (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/System.bld (included from <TOOL>/Depot.bld)
+// All of the Sources.bld files in the current source hierarchy (read by oconfig)
+// <TOOL>/oconfig/bldtempl/Global.bld (name defined in System.bld (GLOBAL_FILE), read by oconfig)
+// <TOOL>/oconfig/bldtempl/TreeSetup.bld
+// <TOOL>/oconfig/bldtempl/Global.unix.bld (name defined in System.bld (GLOBAL_TYPE_FILE), included from Global.bld)
+// <TOOL>/oconfig/bldtempl/Depends.bld  (once for each Sources.bld file, name defined in System.bld (DEPENDS_FILE),
+//                                       read by oconfig)
+// <TOOL>/oconfig/bldtempl/Template.bld
+// <TOOL>/oconfig/bldtempl/Template.$[BUILD_TYPE].bld
+// <TOOL>/oconfig/bldtempl/Template.toplevel.bld ((this file) once for each Sources.bld file, name defined in System.bld
+//                                                (TEMPLATE_FILE), read by oconfig)
+// <TOOL>/oconfig/bldtempl/Template.toplevel.$[BUILD_TYPE].bld
+
+
+// TODO: do I still want/need this?
+#map subdirs
+// Iterate through all of our known source files.  Each src
+// type file gets it's corresponding Makefile listed here.
+// However, we test for $[DIR_TYPE] of toplevel, because the
+// source directories typically don't define their own DIR_TYPE
+// variable, and they end up inheriting this one dynamically.
+#forscopes */
+  #if $[and $[ne $[DIR_TYPE],group],$[or $[ne $[DIR_TYPE],toplevel],$[ne $[PATH],]]]
+    #if $[build_directory]
+      #if $[not $[defined IGNORE_TARGETS]]
+        #addmap subdirs $[PATH]
+      #endif
+    #endif
+  #endif
+#end */
+
+
+// TODO: determine if I still need/want these
+#define testdirs $[sort $[PATH(*/test_bin_target)]]
+#map all_non_tests TARGET(*/lib_target */bin_target */sed_bin_target */noinst_bin_target)
+#map all_src_non_test TARGET(*/src_target)
+
+
+// Merge all of the LIB_PATH entires together for the projects
+// TODO: determine if I still want/need this.  I suspect I do.
+#define all_lib_paths
+#forscopes */*
+  #set all_lib_paths $[all_lib_paths] $[LIB_PATH]
+#end */*
+#set all_lib_paths $[unique $[all_lib_paths]]
+
+
+// Write scripts to setup the environment for each optimization level
+#foreach opt $[OPTIMIZATION_LEVELS]
+  #define all_config_paths . $[osfilename $[standardize $[TOPDIR]/etc]]
+  #define dll_paths $[osfilename $[standardize $[TOPDIR]/lib]]
+  #define bin_paths $[osfilename $[standardize $[TOPDIR]/bin]]
+
+  // get rid of any repeat data
+  #set dll_paths $[unique $[dll_paths]]
+  #set bin_paths $[unique $[bin_paths]]
+
+  #define vars_batch_file $[TOPDIR]/bin/$[opt]env$[SCRIPT_EXT]
+  #output $[vars_batch_file] notouch notest
+  #format straight
+  #call emit_script_conditional_start $[script_conditional $[script_variable_ref $[upcase $[DEPOT]]_INITIALIZED],==,1],init
+    #call emit_script_command echo Environment for $[DEPOT] already set... not going to do anything
+  #call emit_script_conditional_else init
+    #call emit_script_command echo Setting environment for $[opt] developing in $[DEPOT]
+    #call emit_script_prepend_path $[bin_paths]
+    #call emit_script_prepend_lib_path $[dll_paths]
+    #call emit_script_prepend_pathlike $[DEPOT],DEPOTS
+    #if $[defined BUILD_TYPE]
+      #call emit_script_variable BUILD_TYPE,$[BUILD_TYPE]
+    #else
+      #if $[WINDOWS_PLATFORM]
+        #call emit_script_variable BUILD_TYPE,msvc2010
+      #elif $[UNIX_PLATFORM]
+        #call emit_script_variable BUILD_TYPE,unix
+      #endif
+    #endif
+    #if $[BUILD_TESTS]
+      #call emit_script_variable BUILD_TESTS,1
+    #endif
+    #call emit_script_variable OPT_LEVEL,$[opt]
+    #call emit_script_variable $[upcase $[DEPOT]],$[osfilename $[TOPDIR]]
+    // TODO: make sure this control is documented
+    #if $[defined EXTRA_BATCH_ENVIRONMENT]
+      #foreach ebe $[EXTRA_BATCH_ENVIRONMENT]
+        // split the foo=bar into the "foo bar" list so we can emit it as a script variable
+        #define temp_ebe $[split '=',$[ebe]]
+        #define esc_ebe $[split +,$[word 2,$[temp_ebe]]]
+        #call emit_script_variable $[upcase $[word 1,$[temp_ebe]]],$[esc_ebe]
+      #end ebe
+    #endif
+    // TODO: make sure this control is documented
+    #if $[defined EXTRA_BATCH_ALIASES]
+      #foreach eba $[EXTRA_BATCH_ALIASES]
+	#define temp_eba $[split =,$[eba]]
+        #define key_eba $[split +,$[word 1,$[temp_eba]]]
+        #define value_eba $[split +,$[word 2,$[temp_eba]]]
+        #call emit_script_alias $[key_eba],$[value_eba]
+      #end eba
+    #endif
+
+    //Setup the configuration script... this must be defined with OLIVE_CONFIG
+    #define configrc_scopes */lib_target */bin_target
+    #forscopes $[configrc_scopes]
+      #set all_config_paths $[all_config_paths] $[osfilename $[TOPDIR]/$[PATH]]
+    #end $[configrc_scopes]
+    // TODO: make sure this control is documented
+    #if $[defined EXTRA_CONFIG_PATH]
+      #foreach extra_conf $[EXTRA_CONFIG_PATH]
+        #set all_config_paths $[all_config_paths] $[extra_conf]
+      #end extra_conf
+    #endif
+    #set all_config_paths $[sort $[all_config_paths]] 
+    #call emit_script_prepend_pathlike $[all_config_paths],CFG_PATH
+    #call emit_script_variable OLIVE_CONFIG,:configpath=CFG_PATH ART_PATH:configname=Configrc:
+    #call emit_script_variable $[upcase $[DEPOT]]_INITIALIZED,1
+  #call emit_script_conditional_end init
+  #end $[vars_batch_file]
+#end opt
+
+
+// TODO: determine if I still need/want this
+#define all_dep_dirs
+#forscopes $[THISSCOPENAME(*/)]
+  #set all_dep_dirs $[all_dep_dirs] $[DEPEND_DIRS]
+#end $[THISSCOPENAME(*/)]
+#set all_dep_dirs $[unique $[all_dep_dirs]]
+
+
+// TODO: determine if I still need/want this
+#define complete_dep_dirs
+#foreach dep_dir $[all_dep_dirs]
+  #set complete_dep_dirs $[complete_dep_dirs] $[TOPDIR]/$[dep_dir]
+#end dep_dir
+
+
+// Write out info about or dependable dirs
+// TODO: determine if I still need/want this
+#define depot_bld_file $[standardize $[TOPDIR]/../$[DEPOT]project.bld]
+#output $[depot_bld_file] notest notouch
+  #call emit_script_set_var EXTRA_DEPENDABLE_DIRS,$[sort $[complete_dep_dirs]]
+#end $[depot_bld_file]

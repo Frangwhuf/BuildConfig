@@ -1,0 +1,10 @@
+Depot
+  bin
+  inc
+  lib
+  etc
+  doc
+  src
+    project
+    project
+    project

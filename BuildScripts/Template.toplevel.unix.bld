@@ -1,0 +1,31 @@
+//
+// Template.toplevel.unix.bld
+//
+// This file defines the set of output files that will be generated to
+// support a makefile build system for unix.
+//
+// Before this file is processed, the following files are read and
+// processed (in order):
+//
+// The Depot.bld file in the root of the current source hierarchy
+//   (e.g. C:\o\trunk\olive\Depot.bld)
+// <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
+// <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)
+// The user's OCONFIG_CONFIG file. (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/System.bld (included from <TOOL>/Depot.bld)
+// All of the Sources.bld files in the current source hierarchy (read by oconfig)
+// <TOOL>/oconfig/bldtempl/Global.bld (name defined in System.bld (GLOBAL_FILE), read by oconfig)
+// <TOOL>/oconfig/bldtempl/TreeSetup.bld
+// <TOOL>/oconfig/bldtempl/Global.unix.bld (name defined in System.bld (GLOBAL_TYPE_FILE), included from Global.bld)
+// <TOOL>/oconfig/bldtempl/Depends.bld  (once for each Sources.bld file, name defined in System.bld (DEPENDS_FILE),
+//                                       read by oconfig)
+// <TOOL>/oconfig/bldtempl/Template.bld
+// <TOOL>/oconfig/bldtempl/Template.unix.bld
+// <TOOL>/oconfig/bldtempl/Template.toplevel.bld
+// <TOOL>/oconfig/bldtempl/Template.toplevel.unix.bld ((this file) once for each Sources.bld file,
+//                                                     name defined in System.bld (TEMPLATE_FILE), read by oconfig)
+// <TOOL>/oconfig/bldtempl/Template.toplevel.makefile.bld
+
+// This is a makefile-type system, so let's get those settings
+#include $[BUILD_SCRIPTS]/Template.toplevel.makefile.bld

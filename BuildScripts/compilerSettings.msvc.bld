@@ -1,0 +1,54 @@
+//
+// compilerSettings.msvc.bld
+//
+// This file contains settings specific to compilers on Windows.  If
+// we need something like this for other BUILD_TYPEs, this should be
+// refactored.
+
+#define PERL perl
+#define NASM $[osfilename $[TOOL]/nasm/nasmw.exe]
+
+
+#define COMPILER cl
+#define LINKER link
+#define LIBBER lib
+#define COMMONFLAGS /Gi-
+
+// use "unsafe" QIfist flt->int rounding only if FAST_FLT_TO_INT is defined
+#define OPTFLAGS /O2 /Ob1 /G6 $[if $[ne $[FAST_FLT_TO_INT],], /QIfist,]
+#define OPT_DEBUG_FLAGS /GZ
+
+// Note: Zi cannot be used on multiproc builds with precomp hdrs, Z7 must be used instead
+#defer DEBUGPDBFLAGS /Zi /Fd"$[osfilename $[patsubst %.obj,%.pdb,$[target]]]"
+#defer DEBUGFLAGS /MDd $[BROWSEINFO_FLAG] $[DEBUGINFOFLAGS] $[DEBUGPDBFLAGS]
+#define RELEASEFLAGS /MD
+#define WARNING_LEVEL_FLAG /Wall
+
+// NODEFAULTLIB ensures static libs linked in will connect to the correct msvcrt, so no debug/release mixing occurs
+#define LDFLAGS_OPT_DEBUG /NODEFAULTLIB:MSVCRT.LIB
+#define LDFLAGS_OPT_QA /NODEFAULTLIB:MSVCRTD.LIB /OPT:REF
+#define LDFLAGS_OPT_RELEASE /NODEFAULTLIB:MSVCRTD.LIB /OPT:REF $[LDFLAGS_OPT_RELEASE]
+
+#define MAPINFOFLAGS /MAPINFO:EXPORTS
+
+#if $[ENABLE_PROFILING]
+  // note according to docs, this should force /PDB:none /DEBUGTYPE:cv, 
+  // so no pdb file is generated for debug??  (doesnt seem to be true)
+  #define PROFILE_FLAG /PROFILE
+#else
+  #define PROFILE_FLAG
+#endif
+
+// Note: all Opts will link w/debug info now
+#define LINKER_FLAGS /DEBUG /DEBUGTYPE:CV $[PROFILE_FLAG] /MAP $[MAPINFOFLAGS] /fixed:no /incremental:no
+
+#if $[or $[ne $[FORCE_INLINING],],$[eq $[OPTIMIZE],QA],$[eq $[OPTIMIZE],Release]]
+  #define EXTRA_CDEFS FORCE_INLINING $[EXTRA_CDEFS]
+#endif
+
+// ensure pdbs are copied to install dir
+#define build_pdbs yes
+
+#define STL_ALLOCATOR VC6
+
+#define PRECOMP_EXT pch

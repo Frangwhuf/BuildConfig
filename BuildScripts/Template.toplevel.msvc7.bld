@@ -1,0 +1,343 @@
+//
+// Template.toplevel.msvc.bld
+//
+// This file defines the set of output files that will be generated to
+// support a Microsoft Visual C++ .NET solution / project build.  It
+// generates .dll files, compiles source files to .obj files, and does
+// other Windows-specific things.
+//
+// Before this file is processed, the following files are read and
+// processed (in order):
+//
+// The Depot.bld file in the root of the current source hierarchy
+//   (e.g. C:\o\trunk\olive\Depot.bld)
+// <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
+// <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)
+// The user's OCONFIG_CONFIG file. (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/System.bld (included from <TOOL>/Depot.bld)
+// All of the Sources.bld files in the current source hierarchy (read by oconfig)
+// <TOOL>/oconfig/bldtempl/Global.bld (name defined in System.bld (GLOBAL_FILE), read by oconfig)
+// <TOOL>/oconfig/bldtempl/TreeSetup.bld
+// <TOOL>/oconfig/bldtempl/Global.msvc.bld (name defined in System.bld (GLOBAL_TYPE_FILE), included from Global.bld)
+// <TOOL>/oconfig/bldtempl/compilerSettings.bld (included from Global.msvc.bld)
+// <TOOL>/oconfig/bldtempl/Depends.bld  (once for each Sources.bld file, name defined in System.bld (DEPENDS_FILE),
+//                                       read by oconfig)
+// <TOOL>/oconfig/bldtempl/Template.bld
+// <TOOL>/oconfig/bldtempl/Template.msvc.bld
+// <TOOL>/oconfig/bldtempl/Template.toplevel.bld
+// <TOOL>/oconfig/bldtempl/Template.toplevel.msvc.bld ((this file) once for each Sources.bld file, name defined in
+//                                                     System.bld (TEMPLATE_FILE), read by oconfig)
+
+#define T2 $[TAB]$[TAB]
+
+// This is the toplevel directory, e.g. C:\o\trunk\tool.  Here we
+// build the depot solution file and also synthesize the tool_config.h
+// (or whichever file) we may need.
+#define depot_project_file $[ODIR]/$[DEPOT].vcproj
+#define depot_proj_guid $[makeguid $[DEPOT]]
+#define depot_proj_guid_text {$[depot_proj_guid]}
+#output $[depot_project_file] notouch
+#call emit_project_preamble vc,$[DEPOT],$[depot_proj_guid_text]
+$[TAB]<Configurations>
+$[T2]<Configuration
+$[T2]$[TAB]Name="omni|Win32">
+$[T2]</Configuration>
+$[TAB]</Configurations>
+#call emit_project_references $[ne ,]  // the expression is there to avoid a warning about a missing parameter
+#call emit_project_files ,\
+                         $[sort $[EXTRA_DIST] $[PACKAGE_FILENAME] $[SOURCE_FILENAME]],\
+                         $[autodiscover_perl_sources],\
+                         $[autodiscover_swig_files],\
+                         ,\
+                         ,\
+                         ,\
+                         ,\
+                         ,\
+                         $[autodiscover_misc_files],\
+                         $[ORPHANED_FILES],\
+                         ,\
+                         ,\
+                         omni
+#call emit_project_postscript vc
+#end $[depot_project_file]
+#define project_scopes */lib_target */noinst_lib_target */test_lib_target */bin_target */test_bin_target */noinst_bin_target
+
+#define depot_solution_file $[ODIR]/$[DEPOT].sln
+#define depot_guid {8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}
+#output $[depot_solution_file] notouch
+#format straight
+Microsoft Visual Studio Solution File, Format Version 8.00
+#print Microsoft Visual Studio Solution File, Format Version 8.00
+#define num_projects 0
+#forscopes $[project_scopes]
+  #if $[not $[WINK_THIS]]
+    #define proj_guid $[makeguid $[TARGET]]
+    #define proj_guid_text {$[proj_guid]}
+Project("$[depot_guid]") = "$[TARGET]", "$[osfilename $[PATH]]\$[TARGET].vcproj", "$[proj_guid_text]"
+$[TAB]ProjectSection(ProjectDependencies) = postProject
+$[TAB]EndProjectSection
+EndProject
+    #set num_projects $[+ $[num_projects],1]
+  #endif // ! $[WINK_THIS]
+#end $[project_scopes]
+Project("$[depot_guid]") = "$[DEPOT]", "$[DEPOT].vcproj", "$[depot_proj_guid_text]"
+$[TAB]ProjectSection(ProjectDependencies) = postProject
+$[TAB]EndProjectSection
+EndProject
+Global
+#if $[not $[NO_SOURCE_CONTROL]]
+$[TAB]GlobalSection(SourceCodeControl) = preSolution
+$[T2]SccNumberOfProjects = $[+ $[num_projects],1]
+  #define project_counter 0
+  #forscopes $[project_scopes]
+    #if $[not $[WINK_THIS]]
+$[T2]SccProjectUniqueName$[project_counter] = $[subst /,\\,$[PATH]/$[TARGET].vcproj]
+$[T2]SccProjectName$[project_counter] = Perforce\u0020Project
+$[T2]SccLocalPath$[project_counter] = $[join \\,$[patsubst %,..,$[split /,$[PATH]]]]\\..
+$[T2]SccProvider$[project_counter] = MSSCCI:Perforce\u0020SCM
+$[T2]SccProjectFilePathRelativizedFromConnection$[project_counter] = $[subst \,\\,$[osfilename $[ODIR_BLD]/$[PATH]]]\\
+      #set project_counter $[+ $[project_counter],1]
+    #endif // ! $[WINK_THIS]
+  #end $[project_scopes]
+$[T2]CanCheckoutShared = true
+$[T2]SccProjectUniqueName$[project_counter] = $[DEPOT].vcproj
+$[T2]SccProjectName$[project_counter] = Perforce\u0020Project
+$[T2]SccLocalPath$[project_counter] = ..\\..
+$[T2]SccProvider$[project_counter] = MSSCCI:Perforce\u0020SCM
+$[T2]SccProjectFilePathRelativizedFromConnection$[project_counter] = $[subst \,\\,$[osfilename $[ODIR_BLD]]]\\
+$[TAB]EndGlobalSection
+#endif // ! $[NO_SOURCE_CONTROL]
+$[TAB]GlobalSection(SolutionConfiguration) = preSolution
+#foreach opt $[OPTIMIZATION_LEVELS]
+$[T2]$[opt] = $[opt]
+#end opt
+$[TAB]EndGlobalSection
+$[TAB]GlobalSection(ProjectConfiguration) = postSolution
+#forscopes $[project_scopes]
+  #if $[not $[WINK_THIS]]
+    #define guid $[makeguid $[TARGET]]
+    #define cur_scope $[split /,$[THISSCOPENAME]]
+    #define cur_leaf_scope $[word $[words $[cur_scope]],$[cur_scope]]
+    #foreach opt $[OPTIMIZATION_LEVELS]
+$[T2]{$[guid]}.$[opt].ActiveCfg = $[opt]|Win32
+      #if $[not $[and $[eq $[cur_leaf_scope],test_bin_target],\
+                           $[not $[BUILD_TESTS]]]]
+$[T2]{$[guid]}.$[opt].Build.0 = $[opt]|Win32
+      #endif // cur_leaf_scope != test_bin_target
+    #end opt
+  #endif // ! $[WINK_THIS]
+#end $[project_scopes]
+#foreach opt $[OPTIMIZATION_LEVELS]
+$[T2]$[depot_proj_guid_text].$[opt].ActiveCfg = omni|Win32
+#end opt
+$[TAB]EndGlobalSection
+$[TAB]GlobalSection(ProjectDependencies) = postSolution
+#forscopes $[project_scopes]
+  #if $[not $[WINK_THIS]]
+    #define count 0
+    #foreach dependency $[DEPEND_DIRS]
+$[T2]($[makeguid $[TARGET]]).$[count] = ($[makeguid $[all_lib_paths $[TARGET],$[dependency]]])
+      #set count $[+ $[count],1]
+    #end dependency
+  #endif // ! $[WINK_THIS]
+#end $[project_scopes]
+// TODO: add dependencies on test to everything that has a test
+$[TAB]EndGlobalSection
+$[TAB]GlobalSection(ExtensibilityGlobals) = postSolution
+$[TAB]EndGlobalSection
+$[TAB]GlobalSection(ExtensibilityAddIns) = postSolution
+$[TAB]EndGlobalSection
+EndGlobal
+#end $[depot_solution_file]
+
+// check for any winked files
+#define wink_any
+#forscopes $[project_scopes]
+  #if $[WINK_THIS]
+    #set wink_any 1
+  #endif // $[WINK_THIS]
+#end $[project_scopes]
+
+// write scripts to start M$Dev with the correct path, and to build each optimization level.
+#foreach opt $[OPTIMIZATION_LEVELS]
+  #define depot_launch_batch_file $[ODIR]/$[opt]$[SCRIPT_EXT]
+  #output $[depot_launch_batch_file] notouch notest
+  #format straight
+@echo Launching VisualStudio.NET for an $[opt] mode build ...
+  #if $[ne $[IMPORT_DEPOT],]
+    #foreach dep $[IMPORT_DEPOT]
+@call $[osfilename $[IMPORT_TOP]/$[dep]/$[opt]env$[SCRIPT_EXT]]
+    #end dep
+  #endif
+@call $[osfilename $[ODIR]/$[opt]env$[SCRIPT_EXT]]
+@start $[osfilename $[depot_solution_file]]
+  #end $[depot_launch_batch_file]
+  #define depot_build_batch_file $[ODIR]/make$[opt]$[SCRIPT_EXT]
+  #output $[depot_build_batch_file] notouch notest
+  #format straight
+@cd $[script_variable_ref $[upcase $[DEPOT]]BLD]
+@devenv $[downcase $[DEPOT]].sln /build $[opt]
+  #end $[depot_build_batch_file]
+#end opt
+
+// write a script to build whatever the current optimization level is
+#define depot_build_batch_file $[ODIR]/makecurrent$[SCRIPT_EXT]
+#output $[depot_build_batch_file] notouch notest
+#format straight
+devenv $[downcase $[DEPOT]].sln /build $[script_variable_ref OPT_LEVEL]
+#end $[depot_build_batch_file]
+
+#define install_targets */lib_target */bin_target
+// mitchn is no longer sure what should NOT have an install image built for it
+#define has_install_targets 1
+
+#if $[has_install_targets]
+// ------------------------------
+// generate a installer template as a perl module
+#output $[ODIR]/make_install.pm
+#format collapse
+##
+## copy directives auto-generated by oconfig.  Avoid editing
+## It will be overwritten.
+## used with copyFilesByTemplate.pl template.txt
+## debug --> OPT_LEVEL
+## win32 --> BUILD_PLATFORM
+## win32.debug --> BUILD_ID
+
+if (! defined $ENV{"OPT_LEVEL"}) {
+  die "Must define 'OPT_LEVEL' in environment\n";
+}
+$globals{BUILD_PLATFORM}="win32";
+$globals{BUILD_ID}="$globals{BUILD_PLATFORM}.$ENV{OPT_LEVEL}";
+
+
+## merge /resources for $[TARGET] if it exists
+CopyIfExists("$[canonical $[TOPDIR]/resources]/...",
+             "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/resources/]...");
+
+
+
+#forscopes $[install_targets]
+
+// Target is apparently not desired ...
+
+## ##############################
+## creating install for $[TARGET]
+## ##############################
+
+#define perl_scripts $[filter %.pl,$[PERL_FILES]]
+#define perl_modules $[filter-out %.pl,$[PERL_FILES]]
+
+## copy the perl scripts to 'bin'
+## $[perl_scripts]
+  #foreach script $[perl_scripts]
+Copy( "$[canonical $[PATH]/$[script]]",
+      "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/site_perl/$[script]]");
+  #end script
+
+## copy the perl modules to 'site_perl'
+## $[perl_modules]
+  #foreach module $[perl_modules]
+Copy( "$[canonical $[PATH]/$[module]]",
+      "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/site_perl/$[module]]");
+  #end module
+
+
+## copy the include headers for $[TARGET]
+## $[INSTALL_HEADERS]
+
+  #foreach hdr $[INSTALL_HEADERS]
+Copy( "$[canonical $[PATH]/$[hdr]]",
+      "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/inc/$[hdr]]");
+  #end hdr
+
+// maybe copy headers to the "root" if they're public include headers
+// and have been overridden from the default value
+## maybe copy in some public includes for $[TARGET]
+  #foreach hdr $[PUBLIC_INCLUDE]
+   #if $[ne $[PUBLIC_INCLUDE],$[TOPDIR]/$[PATH]]
+Copy( "$[canonical $[hdr]]/...",
+      "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/inc/...]");
+   #endif
+  #end hdr
+
+
+## copy the binary stuff into the bin directory
+CopyIfExists("$[canonical $[ODIR]/$[PATH]/$ENV{OPT_LEVEL}]/*.dll",
+             "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/bin]/*.dll");
+CopyIfExists("$[canonical $[ODIR]/$[PATH]/$ENV{OPT_LEVEL}]/*.lib",
+             "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/bin]/*.lib");
+CopyIfExists("$[canonical $[ODIR]/$[PATH]/$ENV{OPT_LEVEL}]/*.pdb",
+             "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/bin]/*.pdb");
+CopyIfExists("$[canonical $[ODIR]/$[PATH]/$ENV{OPT_LEVEL}]/*.exe",
+             "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/bin]/*.exe");
+
+
+// XXXmwn TODO: figure out whether we really need these DLL's for runtime, or whether
+// they've been statically linked
+## copy the external dlls, if any
+#foreach edll $[EXTERNAL_DLLS]
+Copy( "$[canonical $[PATH]/$[edll]]",
+      "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/bin/$[notdir $[edll]]]");
+#end edll
+
+
+// XXXmwn TODO: these should be emitted as "installer builder instructions" instead
+// of being copied into the "wink tree" hierarchy, since local developers would
+// prefer NOT to see these copied around, and certainly don't want someone else's
+// copy of these files
+
+// this should REALLY decide whether it's release or debug build, and just copy the
+// required DLL over, but for now, I'll just copy both because it's easier
+## copy the "global" runtime dlls (if any)
+#foreach edll $[GLOBAL_DLLS]
+Copy( "$[canonical $[edll]]",
+      "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/bin/$[notdir $[edll]]]");
+#end edll
+             
+## copy the build deependency cache files
+#forscopes */
+  #if $[eq $[PATH],]
+CopyIfExists("$[canonical $[ODIR]/$[DEPOT].dep]",
+             "$[canonical $[INSTALL_DIR]/$[DEPOT]/dependency_cache/$[DEPOT].dep]");
+  #else
+CopyIfExists("$[canonical $[ODIR]/$[PATH]/$[subst /,_,$[PATH]].dep]",
+             "$[canonical $[INSTALL_DIR]/$[DEPOT]/dependency_cache/$[subst /,_,$[PATH]].dep]");
+  #endif
+#end */
+
+// XXX need to add the linux binaries / libs here
+
+// this should probably be a generated INSTALL_TEST target
+## copy the test sources for $[TARGET] if they exist
+## *.cpp
+## *.h  ... or INSTALL_TEST
+## $[INSTALL_TEST]
+
+  #foreach test $[INSTALL_TEST]
+## test $[test] path $[PATH] target $[TARGET]
+// convert test/... to ... in $[test] to create "target"
+#define notestpath $[subst test/, , $[test]]
+Copy( "$[canonical $[PATH]/$[test]]",
+      "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/test/$[PATH]/$[notestpath]]");
+CopyIfExists("$[canonical $[ODIR]/$[PATH]/test/$ENV{OPT_LEVEL}]/*.exe",
+             "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/test/$[PATH]]/*.exe");
+  #end test
+
+## merge /etc for $[TARGET] if it exists
+CopyIfExists("$[canonical $[PATH]/etc]/...",
+             "$[canonical $[INSTALL_DIR]/$[DEPOT]/$globals{BUILD_ID}/etc/]...");
+
+#end $[install_targets]
+## end of config file
+## ##############################
+#end $[ODIR]/make_install.pm
+// ------------------------------
+#endif
+
+// If there is a file called LocalSetup.bld in the depot's
+// top directory, then invoke that.  It might contain some
+// further setup instructions.
+#sinclude $[TOPDIRPREFIX]LocalSetup.msvc.bld
+#sinclude $[TOPDIRPREFIX]LocalSetup.bld

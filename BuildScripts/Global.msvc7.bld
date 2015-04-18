@@ -1,0 +1,1034 @@
+//
+// Global.msvc.bld
+//
+// This file is read in before any of the individual Sources.bld files
+// are read.  It defines a few global variables to assist
+// Template.msvc.bld.
+
+#define REQUIRED_OCONFIG_VERSION 1.7
+
+#if $[< $[OCONFIG_VERSION],$[REQUIRED_OCONFIG_VERSION]]
+  #error You need at least oconfig version $[REQUIRED_OCONFIG_VERSION] to use BUILD_TYPE msvc7.
+#endif
+
+
+// TODO: determine if I still need/want this.
+#defun get_metalibs target,complete_libs
+  // In Windows, we need to know the complete set of metalibs that
+  // encapsulates each of the libraries we'd be linking with normally.
+  // In the case where a particular library is not part of a metalib,
+  // we include the library itself.
+  #define actual_libs
+  #foreach lib $[complete_libs]
+    // Only consider libraries that we're actually building.
+    #if $[all_libs $[and $[build_directory],$[build_target]],$[lib]]
+      #set actual_libs $[actual_libs] $[lib]
+    #endif
+  #end lib
+  #set actual_libs $[unique $[actual_libs]] $[patsubst %:m,%,$[filter %:m,$[OTHER_LIBS]]]
+  $[actual_libs]
+#end get_metalibs
+
+
+// TODO: determine if I still need/want this
+#defun decygwin frompat,topat,path
+  #foreach file $[path]
+    $[patsubstw $[frompat],$[topat],$[osfilename $[file]]]
+  #end file
+#end decygwin
+
+
+// TODO: determine if I still need/want this
+#defun make_path_absolute_if_needed path,directory
+  $[if $[isfullpath $[path]],$[path],$[directory]/$[path]]
+#end make_path_absolute_if_needed
+
+
+// TODO: determine if I still need/want this
+#define install_lib_dir $[decygwin %,%,$[install_lib_dir]]
+#define install_bin_dir $[decygwin %,%,$[install_bin_dir]]
+#define install_headers_dir $[decygwin %,%,$[install_headers_dir]]
+#define install_data_dir $[decygwin %,%,$[install_data_dir]]
+
+
+// Define this if we want to make .sbr files.
+// TODO: determine if I still need/want this.
+#if $[USE_BROWSEINFO]
+  #defer BROWSEINFO_FLAG /Fr"$[osfilename $[target:%.obj=%.sbr]]"
+#else
+  #define BROWSEINFO_FLAG
+#endif
+
+
+#define CFLAGS_SHARED
+
+
+// Define LINK_ALL_STATIC to generate static libs instead of DLLs.
+#if $[ne $[LINK_ALL_STATIC],]
+  #define dlink_all_static LINK_ALL_STATIC
+  #define build_dlls
+  #define build_libs yes
+  #define dlllib lib
+#else
+  #define dlink_all_static
+  #define build_dlls yes
+  #define build_libs
+  #define dlllib dll
+#endif
+
+
+#include $[BUILD_SCRIPTS]/compilerSettings.$[BUILD_TYPE].bld
+
+
+#if $[TEST_INLINING]
+  // /W4 will make MSVC spit out if it inlined a fn or not, but also
+  // cause a lot of other spam warnings
+  #define WARNING_LEVEL_FLAG /W4
+  #define EXTRA_CDEFS FORCE_INLINING $[EXTRA_CDEFS]
+#endif
+
+
+// TODO: check on the below settings and how they map into our world view
+// do NOT try to do #defer CDEFINES_OPT_DEBUG $[CDEFINES_OPT_DEBUG] here!
+// It won't let Sources.bld define their own CDEFINES_OPT_DEBUG!
+// They must use EXTRA_CDEFS!
+#defer CDEFINES_OPT_DEBUG $[if $[NO_DEBUG_CDEF],,_DEBUG] $[dlink_all_static] $[EXTRA_CDEFS]
+#defer CDEFINES_OPT_QA $[dlink_all_static] $[EXTRA_CDEFS]
+#defer CDEFINES_OPT_RELEASE NDEBUG $[dlink_all_static] $[EXTRA_CDEFS]
+
+
+// Opt_Debug /GZ disables OPT flags, so make sure it's OPT_DEBUG only
+#defer CFLAGS_OPT_DEBUG $[CDEFINES_OPT_DEBUG:%=/D%] $[COMMONFLAGS] $[DEBUGFLAGS] $[OPT_DEBUG_FLAGS]
+#defer CFLAGS_OPT_QA $[CDEFINES_OPT_QA:%=/D%] $[COMMONFLAGS] $[RELEASEFLAGS] $[OPTFLAGS] $[OPT_QA_FLAGS] $[DEBUGPDBFLAGS]
+#defer CFLAGS_OPT_RELEASE $[CDEFINES_OPT_RELEASE:%=/D%] $[COMMONFLAGS] $[RELEASEFLAGS] $[OPTFLAGS] \
+                          $[OPT_RELEASE_FLAGS] $[DEBUGPDBFLAGS]
+
+
+// NODEFAULTLIB ensures static libs linked in will connect to the correct
+// msvcrt, so no debug/release mixing occurs
+#defer LDFLAGS_OPT_DEBUG $[LINKER_FLAGS] $[LDFLAGS_OPT_DEBUG] 
+#defer LDFLAGS_OPT_QA $[LINKER_FLAGS] $[LDFLAGS_OPT_QA] 
+#defer LDFLAGS_OPT_RELEASE $[LINKER_FLAGS] $[LDFLAGS_OPT_RELEASE] 
+
+
+// note: does NOT include .dll or .lib at end
+#defun get_dllname dll_basename
+  // right now there is no name remapping needed
+  $[dll_basename]
+#end get_dllname
+
+
+// Because Visual Studio .NET prefers to generate object files using the same
+// base name as the source file, we don't want an object file prefix.
+// TODO: determine if I still need/want this.
+#define obj_prefix
+
+
+// TODO: check the HAVE_DINKUM flag for what it means
+// Additional global defines for building under Microsoft Visual Studio .NET.
+#defer EXTRA_DEFINES_GENERAL WIN32_VC WIN32 $[if $[eq $[MFC_APP],1],,WIN32_LEAN_AND_MEAN] \
+                             _STLP_USE_DYNAMIC_LIB _WINDOWS USE_DLLS \
+                             USE_MALLOC_DLL APACHE=1 _WIN32_WINNT=0x0500
+#defer EXTRA_DEFINES_DEBUG $[EXTRA_DEFINES_GENERAL] _DEBUG MALLOC_DEBUG
+#defer EXTRA_DEFINES_QA $[EXTRA_DEFINES_GENERAL] INLINE_FUNCTIONS NDEBUG NPROF
+#defer EXTRA_DEFINES_RELEASE $[EXTRA_DEFINES_GENERAL] RELEASE INLINE_FUNCTIONS NDEBUG NPROF
+
+
+// Additional compiler flags.
+#defer extra_cflags /EHsc /Zm300 $[WARNING_LEVEL_FLAG] $[END_CFLAGS]
+
+#defer DECYGWINED_INC_PATHLIST_ARGS $[decygwin %,/I"%",$[EXTRA_INCPATH] $[ipath]]
+#defer MAIN_C_COMPILE_ARGS /nologo /c $[DECYGWINED_INC_PATHLIST_ARGS] $[flags] $[extra_cflags] "$[osfilename $[source]]"
+
+#defer COMPILE_C $[COMPILER] /Fo"$[osfilename $[target]]" $[MAIN_C_COMPILE_ARGS]
+#defer COMPILE_C++ $[COMPILE_C]
+
+#defer STATIC_LIB_C $[LIBBER] /nologo $[sources] /OUT:"$[osfilename $[target]]"
+#defer STATIC_LIB_C++ $[STATIC_LIB_C]
+
+#defer COMPILE_IDL midl /nologo /env win32 /Oicf $[DECYGWINED_INC_PATHLIST_ARGS]
+#defer COMPILE_RC rc /R /D "NDEBUG" /L 0x409 $[DECYGWINED_INC_PATHLIST_ARGS]
+
+// we might want to specify base addresses for our DLLs
+#if $[ne $[USE_DLLBASE],]
+  // use predefined bases to speed dl loading and simplify debugging
+  #defer DLLNAMEBASE $[get_dllname $[TARGET]]
+  #defer DLLBASEADDRFILENAME dllbase.txt
+  #defer DLLBASEARG "/BASE:@$[$[DEPOT]_ver_dir]\$[DLLBASEADDRFILENAME],$[DLLNAMEBASE]"
+#else
+  // requires envvar?
+  #define GENERATE_BUILDDATE
+#endif
+
+#defer LINKER_DEF_FILE_ARG $[if $[LINKER_DEF_FILE],/DEF:"$[LINKER_DEF_FILE]",]
+
+#defer SHARED_LIB_C $[LINKER] /nologo /DLL $[LINKER_DEF_FILE_ARG] $[LDFLAGS_OPT_$[upcase $[OPTIMIZE]]] \
+                              $[DLLBASEARG] /OUT:"$[osfilename $[target]]" $[sources] \
+                              $[decygwin %,/LIBPATH:"%",$[lpath] $[EXTRA_LIBPATH]] \
+                              $[patsubst %.lib,%.lib,%,lib%.lib,$[libs]]
+#defer SHARED_LIB_C++ $[SHARED_LIB_C]
+
+#defer LINK_BIN_C $[LINKER] /nologo $[LDFLAGS_OPT_$[upcase $[OPTIMIZE]]] $[sources] \
+                            $[decygwin %,/LIBPATH:"%",$[lpath] $[EXTRA_LIBPATH]] \
+                            $[patsubst %.lib,%.lib,%,lib%.lib,$[libs]] /OUT:"$[osfilename $[target]]"
+#defer LINK_BIN_C++ $[LINK_BIN_C]
+
+#if $[ne $[LINK_ALL_STATIC],]
+  #defer SHARED_LIB_C $[STATIC_LIB_C]
+  #defer SHARED_LIB_C++ $[STATIC_LIB_C++]
+  #defer ODIR_SHARED $[ODIR_STATIC]
+#endif
+
+
+//
+// Emit the standard start of a project file
+//
+#defsub emit_project_preamble type,name,guid
+  #if $[eq $[type],cs]
+    #call emit_csproject_preamble $[name],$[guid]
+  #else
+    #call emit_vcproject_preamble $[name],$[guid]
+  #endif
+#end emit_project_preamble
+
+
+//
+// Emit the closing block of a project file
+//
+#defsub emit_project_postscript type
+  #if $[eq $[type],cs]
+    #call emit_csproject_postscript
+  #else
+    #call emit_vcproject_postscript
+  #endif
+#end emit_project_postscript
+
+
+//
+// Emit the standard start of a .vcproj file
+//
+#defsub emit_vcproject_preamble name,guid
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+$[TAB]ProjectType="Visual C++"
+$[TAB]Version="7.10"
+$[TAB]Name="$[name]"
+$[TAB]ProjectGUID="$[guid]"
+$[TAB]RootNamespace="$[name]"
+  #if $[not $[NO_SOURCE_CONTROL]]
+$[TAB]SccProjectName="Perforce Project"
+$[TAB]SccAuxPath=""
+$[TAB]SccLocalPath="$[if $[ne $[PATH],],$[if $[ne $[PATH],.],$[join \,$[patsubst %,..,$[split /,$[PATH]]]]\]]..\.."
+$[TAB]SccProvider="MSSCCI:Perforce SCM"
+  #endif // ! $[NO_SOURCE_CONTROL]
+$[TAB]Keyword="CustomAppWizProj">
+$[TAB]<Platforms>
+$[TAB]$[TAB]<Platform
+$[TAB]$[TAB]$[TAB]Name="Win32"/>
+$[TAB]</Platforms>
+#end emit_vcproject_preamble
+
+
+//
+// Emit the compiler tool specification for a .vcproj file.
+//
+#defsub emit_project_compiler opt,ipath,defines,precomp_file,flags
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCLCompilerTool"
+$[TAB]$[TAB]$[TAB]$[TAB]AdditionalIncludeDirectories="$[ipath]"
+$[TAB]$[TAB]$[TAB]$[TAB]AdditionalOptions="$[if $[eq $[MFC_APP],],/vmg] $[flags:-%=/%]"
+$[TAB]$[TAB]$[TAB]$[TAB]BufferSecurityCheck="FALSE"
+$[TAB]$[TAB]$[TAB]$[TAB]CompileAs="0"
+$[TAB]$[TAB]$[TAB]$[TAB]DebugInformationFormat="3"
+$[TAB]$[TAB]$[TAB]$[TAB]DisableSpecificWarnings="4127;4505;4201;4251;4244;4521;4018;4355;4800;4522;4146"
+$[TAB]$[TAB]$[TAB]$[TAB]EnableFiberSafeOptimizations="FALSE"
+$[TAB]$[TAB]$[TAB]$[TAB]EnableIntrinsicFunctions="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]ForceConformanceInForLoopScope="TRUE"
+  #if $[FORCED_INCLUDE_FILES]
+$[TAB]$[TAB]$[TAB]$[TAB]ForcedIncludeFiles="$[osfilename $[FORCED_INCLUDE_FILES]]"
+  #endif
+$[TAB]$[TAB]$[TAB]$[TAB]OptimizeForProcessor="3"
+$[TAB]$[TAB]$[TAB]$[TAB]OptimizeForWindowsApplication="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]PreprocessorDefinitions="$[defines];NOMINMAX"
+$[TAB]$[TAB]$[TAB]$[TAB]StringPooling="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]SuppressStartupBanner="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]TreatWChar_tAsBuiltInType="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]ExceptionHandling="$[if $[eq $[NO_EXCEPTIONS],],TRUE,FALSE]"
+  #if $[not $[WARN_OK]]
+$[TAB]$[TAB]$[TAB]$[TAB]WarnAsError="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]WarningLevel="3"
+  #endif
+  #if $[and $[DO_PCH],$[precomp_file]]
+    #if $[INTERMEDIATE_DIR]
+$[TAB]$[TAB]$[TAB]$[TAB]PrecompiledHeaderFile="$[osfilename $[opt]/$[INTERMEDIATE_DIR]/$[precomp_file:%.h=%.$[PRECOMP_EXT]]]"
+    #else
+$[TAB]$[TAB]$[TAB]$[TAB]PrecompiledHeaderFile="$[osfilename $[opt]/$[precomp_file:%.h=%.$[PRECOMP_EXT]]]"
+  #endif
+$[TAB]$[TAB]$[TAB]$[TAB]PrecompiledHeaderThrough="$[precomp_filename]"
+$[TAB]$[TAB]$[TAB]$[TAB]UsePrecompiledHeader="3"
+  #endif
+  #if $[eq $[opt],debug]
+$[TAB]$[TAB]$[TAB]$[TAB]BasicRuntimeChecks="0"
+$[TAB]$[TAB]$[TAB]$[TAB]MinimalRebuild="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]Optimization="0"
+$[TAB]$[TAB]$[TAB]$[TAB]RuntimeLibrary="3"
+  #elif $[eq $[opt],qa]
+$[TAB]$[TAB]$[TAB]$[TAB]EnableFunctionLevelLinking="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]Optimization="4"
+$[TAB]$[TAB]$[TAB]$[TAB]RuntimeLibrary="2"
+  #elif $[eq $[opt],release]
+$[TAB]$[TAB]$[TAB]$[TAB]EnableFunctionLevelLinking="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]FavorSizeOrSpeed="2"
+$[TAB]$[TAB]$[TAB]$[TAB]GlobalOptimizations="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]ImproveFloatingPointConsistency="FALSE"
+$[TAB]$[TAB]$[TAB]$[TAB]InlineFunctionExpansion="2"
+$[TAB]$[TAB]$[TAB]$[TAB]OmitFramePointers="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]Optimization="4"
+$[TAB]$[TAB]$[TAB]$[TAB]RuntimeLibrary="2"
+  #endif
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+#end emit_project_compiler
+
+
+//
+// Emit the linker tool specification for a .vcproj file.
+//
+#defsub emit_project_linker opt,build,is_bin,target,depends,lpath,bindir,ignore_default_library_names,is_dynlib,lflags
+  #if $[build]
+    #if $[or $[is_bin],$[is_dynlib]]
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCLinkerTool"
+$[TAB]$[TAB]$[TAB]$[TAB]AdditionalDependencies="$[depends]"
+$[TAB]$[TAB]$[TAB]$[TAB]AdditionalLibraryDirectories="$[lpath]"
+      #if $[PERFORMANCE]
+$[TAB]$[TAB]$[TAB]$[TAB]AdditionalOptions="/MACHINE:I386 /fixed:no $[lflags:-%=/%]"
+      #else
+$[TAB]$[TAB]$[TAB]$[TAB]AdditionalOptions="/MACHINE:I386 $[lflags:-%=/%]"
+      #endif
+      #if $[ignore_default_library_names]
+$[TAB]$[TAB]$[TAB]$[TAB]IgnoreDefaultLibraryNames="$[ignore_default_library_names]"
+      #endif
+$[TAB]$[TAB]$[TAB]$[TAB]GenerateDebugInformation="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]OutputFile="$[osfilename $[target]]"
+$[TAB]$[TAB]$[TAB]$[TAB]ProgramDatabaseFile="$[osfilename $[bindir]/$[LIB_BASENAME].pdb]"
+#define SUBSYSTEM_OPTION 0
+#if $[or $[eq $[WIN32_SUBSYSTEM],WINDOWS], $[eq $[MFC_APP],1] ]
+  #set SUBSYSTEM_OPTION 2
+#elif $[eq $[WIN32_SUBSYSTEM],CONSOLE]
+  #set SUBSYSTEM_OPTION 1
+#endif
+$[TAB]$[TAB]$[TAB]$[TAB]SubSystem="$[SUBSYSTEM_OPTION]"
+$[TAB]$[TAB]$[TAB]$[TAB]SuppressStartupBanner="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]ModuleDefinitionFile="$[if $[LINKER_DEF_FILE],$[osfilename $[TOPDIR]/$[DIRPREFIX]$[LINKER_DEF_FILE]]]"
+      #if $[eq $[opt],debug]
+$[TAB]$[TAB]$[TAB]$[TAB]LinkIncremental="2"
+      #elif $[eq $[opt],qa]
+$[TAB]$[TAB]$[TAB]$[TAB]LinkIncremental="1"
+      #elif $[eq $[opt],release]
+$[TAB]$[TAB]$[TAB]$[TAB]EnableCOMDATFolding="2"
+$[TAB]$[TAB]$[TAB]$[TAB]OptimizeReferences="2"
+      #endif
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+    #else  // $[is_bin] || $[is_dynlib]
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCLibrarianTool"
+$[TAB]$[TAB]$[TAB]$[TAB]OutputFile="$[osfilename $[target:%.dll=%.lib]]"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+    #endif // $[is_bin] || $[is_dynlib]
+  #else // $[build]
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCLibrarianTool"
+$[TAB]$[TAB]$[TAB]$[TAB]OutputFile=""
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+  #endif // $[build]
+#end emit_project_linker
+
+
+//
+// Emit the MIDL compiler tool specification for a .vcproj file.
+//
+#defsub emit_project_midl opt,bindir
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCMIDLTool"
+$[TAB]$[TAB]$[TAB]$[TAB]GenerateStublessProxies="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]HeaderFileName="$[osfilename $[bindir]/$[TARGET].h]"
+$[TAB]$[TAB]$[TAB]$[TAB]InterfaceIdentifierFileName="$[osfilename $[bindir]/$[TARGET]_i.c]"
+$[TAB]$[TAB]$[TAB]$[TAB]MkTypLibCompatible="FALSE"
+$[TAB]$[TAB]$[TAB]$[TAB]ProxyFileName="$[osfilename $[bindir]/$[TARGET]_p.c]"
+$[TAB]$[TAB]$[TAB]$[TAB]SuppressStartupBanner="TRUE"
+$[TAB]$[TAB]$[TAB]$[TAB]TargetEnvironment="1"
+$[TAB]$[TAB]$[TAB]$[TAB]TypeLibraryName="$[osfilename $[bindir]/$[TARGET].tlb]"
+      #if $[eq $[opt],debug]
+$[TAB]$[TAB]$[TAB]$[TAB]PreprocessorDefinitions="_DEBUG"
+      #elif $[eq $[opt],qa]
+$[TAB]$[TAB]$[TAB]$[TAB]PreprocessorDefinitions="NDEBUG"
+      #elif $[eq $[opt],release]
+$[TAB]$[TAB]$[TAB]$[TAB]PreprocessorDefinitions="NDEBUG"
+      #endif
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+#end emit_project_midl
+
+
+//
+// Emit the resource compiler tool specification for a .vcproj file.
+//
+#defsub emit_project_resource_compiler opt,ipath
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCResourceCompilerTool"
+$[TAB]$[TAB]$[TAB]$[TAB]AdditionalIncludeDirectories="$[ipath]"
+$[TAB]$[TAB]$[TAB]$[TAB]Culture="1033"
+      #if $[eq $[opt],debug]
+$[TAB]$[TAB]$[TAB]$[TAB]PreprocessorDefinitions="_DEBUG"
+      #elif $[eq $[opt],qa]
+$[TAB]$[TAB]$[TAB]$[TAB]PreprocessorDefinitions="NDEBUG"
+      #elif $[eq $[opt],release]
+$[TAB]$[TAB]$[TAB]$[TAB]PreprocessorDefinitions="NDEBUG"
+      #endif
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+#end emit_project_resource_compiler
+
+
+//
+// Emit a configuration specification preamble for a .vcproj file.
+//
+#defsub emit_project_configuration_preamble name,opt,is_bin,is_dynlib,have_idl,buildvar,target,bindir
+$[TAB]$[TAB]<Configuration
+$[TAB]$[TAB]$[TAB]Name="$[name]|Win32"
+  #if $[defined CHARACTER_SET]
+$[TAB]$[TAB]$[TAB]CharacterSet="$[CHARACTER_SET]"
+  #else
+$[TAB]$[TAB]$[TAB]CharacterSet="1"
+  #endif
+  #if $[INTERMEDIATE_DIR]
+$[TAB]$[TAB]$[TAB]IntermediateDirectory="$[osfilename $[bindir]/$[INTERMEDIATE_DIR]]"
+  #else
+$[TAB]$[TAB]$[TAB]IntermediateDirectory="$[osfilename $[bindir]]"
+  #endif
+$[TAB]$[TAB]$[TAB]OutputDirectory="$[osfilename $[bindir]]"
+  #if $[not $[is_bin]]
+    #if $[have_idl]
+$[TAB]$[TAB]$[TAB]UseOfATL="1"
+    #else
+$[TAB]$[TAB]$[TAB]UseOfATL="0"
+    #endif
+  #endif
+$[TAB]$[TAB]$[TAB]UseOfMFC="$[if $[eq $[MFC_APP],1],2,0]"
+  #if $[eq $[opt],qa]
+$[TAB]$[TAB]$[TAB]ALTMinimizesCRunTimLibraryUsage="FALSE"
+  #elif $[eq $[opt],release]
+$[TAB]$[TAB]$[TAB]ALTMinimizesCRunTimLibraryUsage="FALSE"
+  #if $[defined NO_WHOLE_PROGRAM_OPTIMIZATION]
+$[TAB]$[TAB]$[TAB]WholeProgramOptimization="FALSE"
+  #else
+$[TAB]$[TAB]$[TAB]WholeProgramOptimization="TRUE"
+  #endif
+  #endif
+  #if $[is_bin]
+$[TAB]$[TAB]$[TAB]ConfigurationType="1">
+  #elif $[is_dynlib]
+$[TAB]$[TAB]$[TAB]ConfigurationType="2">
+  #else
+$[TAB]$[TAB]$[TAB]ConfigurationType="4">
+  #endif
+#end emit_project_configuration_preamble
+
+
+//
+// Emit a configuration specification postscript for a .vcproj file.
+//
+#defsub emit_project_configuration_postscript
+$[TAB]$[TAB]</Configuration>
+#end emit_project_configuration_postscript
+
+
+//
+// Emit references to other projects, so that M$ Dev can figure
+// out what else might need to be built.
+//
+#defsub emit_project_references reflibs
+$[TAB]<References>
+  #foreach lib $[reflibs]
+    #if $[not $[or $[all_libs $[OMIT_REFERENCE],$[lib]],$[all_libs $[WINK_THIS],$[lib]]]]
+$[TAB]$[TAB]<ProjectReference
+$[TAB]$[TAB]$[TAB]ReferencedProjectIdentifier="$[all_libs $[proj_guid_text],$[lib]]"
+$[TAB]$[TAB]$[TAB]Name="$[lib]"/>
+    #endif
+  #end lib
+$[TAB]</References>
+#end emit_project_references
+
+
+//
+// Emit a filter block (recursively) for files that are not
+// compiled.  Use the filters to mimic the directory structure
+// of the files.
+//
+#defsub emit_project_structure_nocomp_files files,name,opt_levels,indent,cumulative_dir
+  #define ident
+  #for cnt 1,$[indent],1
+    #set ident $[ident]$[TAB]
+  #end cnt
+$[ident]<Filter
+$[ident]$[TAB]Name="$[name]"
+$[ident]$[TAB]Filter="">
+  #define local_files
+  #while $[files]
+    #define file $[firstword $[files]]
+    #define file_split $[split /,$[file]]
+    #if $[> $[words $[file_split]],1]
+      #define sub_dir $[firstword $[file_split]]
+      #define sub_files $[patsubst $[sub_dir]/%,%,$[filter $[sub_dir]/%,$[files]]]
+      #call emit_project_structure_nocomp_files $[sub_files],\
+                                                $[sub_dir],\
+                                                $[opt_levels],\
+                                                $[+ $[indent],1],\
+                                                $[if $[cumulative_dir],$[cumulative_dir]/$[sub_dir],$[sub_dir]]
+      #set files $[filter-out $[sub_dir]/%,$[files]]
+    #else
+      #set local_files $[local_files] $[file]
+      #set files $[filter-out $[file],$[files]]
+    #endif
+  #end $[files]
+  #foreach file $[local_files]
+$[ident]$[TAB]<File
+    #define out_file $[make_path_absolute_if_needed $[file],$[TOPDIR]/$[PATH]$[if $[cumulative_dir],/$[cumulative_dir]]]
+    #set out_file $[osfilename $[out_file]]
+$[ident]$[TAB]$[TAB]RelativePath="$[out_file]">
+    #foreach opt $[opt_levels]
+$[ident]$[TAB]$[TAB]<FileConfiguration
+$[ident]$[TAB]$[TAB]$[TAB]Name="$[opt]|Win32"
+$[ident]$[TAB]$[TAB]$[TAB]ExcludedFromBuild="TRUE">
+$[ident]$[TAB]$[TAB]$[TAB]<Tool
+$[ident]$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCustomBuildTool"/>
+$[ident]$[TAB]$[TAB]</FileConfiguration>
+    #end opt
+$[ident]$[TAB]</File>
+  #end file
+$[ident]</Filter>
+#end emit_project_structure_nocomp_files
+
+
+//
+// Emit a filter block (recursively) for files that are simply
+// compiled.  Use the filters to mimic the directory structure
+// of the files.
+//
+#defsub emit_project_structure_simplecomp_files files,name,opt_levels,indent,cumulative_dir
+  #define ident
+  #for cnt 1,$[indent],1
+    #set ident $[ident]$[TAB]
+  #end cnt
+$[ident]<Filter
+$[ident]$[TAB]Name="$[name]"
+$[ident]$[TAB]Filter="">
+  #define local_files
+  #while $[files]
+    #define file $[firstword $[files]]
+    #define file_split $[split /,$[file]]
+    #if $[> $[words $[file_split]],1]
+      #define sub_dir $[firstword $[file_split]]
+      #define sub_files $[patsubst $[sub_dir]/%,%,$[filter $[sub_dir]/%,$[files]]]
+      #call emit_project_structure_simplecomp_files $[sub_files],\
+                                                    $[sub_dir],\
+                                                    $[opt_levels],\
+                                                    $[+ $[indent],1],\
+                                                    $[if $[cumulative_dir],$[cumulative_dir]/$[sub_dir],$[sub_dir]]
+      #set files $[filter-out $[sub_dir]/%,$[files]]
+    #else
+      #set local_files $[local_files] $[file]
+      #set files $[filter-out $[file],$[files]]
+    #endif
+  #end $[files]
+  #foreach file $[local_files]
+$[ident]$[TAB]<File
+    #define out_file $[make_path_absolute_if_needed $[file],$[TOPDIR]/$[PATH]$[if $[cumulative_dir],/$[cumulative_dir]]]
+    #set out_file $[osfilename $[out_file]]
+$[ident]$[TAB]$[TAB]RelativePath="$[out_file]">
+    #foreach opt $[opt_levels]
+$[ident]$[TAB]$[TAB]<FileConfiguration
+$[ident]$[TAB]$[TAB]$[TAB]Name="$[opt]|Win32"
+$[ident]$[TAB]$[TAB]$[TAB]ExcludedFromBuild="FALSE">
+//$[ident]$[TAB]$[TAB]$[TAB]<Tool
+//$[ident]$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCustomBuildTool"/>
+$[ident]$[TAB]$[TAB]</FileConfiguration>
+    #end opt
+$[ident]$[TAB]</File>
+  #end file
+$[ident]</Filter>
+#end emit_project_structure_simplecomp_files
+
+
+//
+// Emit a filter block for files that are not compiled
+//
+#defsub emit_project_nocomp_files files,name,opt_levels
+  #define local_files
+  #foreach file $[files]
+    #if $[isfile $[file]]
+      #set local_files $[local_files] $[file]
+    #endif
+  #end file
+  #if $[local_files]
+$[TAB]$[TAB]<Filter
+$[TAB]$[TAB]$[TAB]Name="$[name]"
+$[TAB]$[TAB]$[TAB]Filter="">
+    #foreach file $[local_files]
+$[TAB]$[TAB]$[TAB]<File
+$[TAB]$[TAB]$[TAB]$[TAB]RelativePath="$[osfilename $[make_path_absolute_if_needed $[file],$[TOPDIR]/$[PATH]]]">
+      #foreach opt $[opt_levels]
+$[TAB]$[TAB]$[TAB]$[TAB]<FileConfiguration
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name="$[opt]|Win32"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]ExcludedFromBuild="TRUE">
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCustomBuildTool"/>
+$[TAB]$[TAB]$[TAB]$[TAB]</FileConfiguration>
+      #end opt
+$[TAB]$[TAB]$[TAB]</File>
+    #end file
+$[TAB]$[TAB]</Filter>
+  #endif // $[local_files]
+#end emit_project_nocomp_files
+
+
+//
+// Emit a recursive filter block for files that are compiled regularly.  Use the filters
+// to mimic the directory structure of the files.
+//
+#defsub emit_project_structure_comp_files files,name,opt_levels,indent,cumulative_dir,tree
+  #define ident
+  #for cnt 1,$[indent],1
+    #set ident $[ident]$[TAB]
+  #end cnt
+#if $[name]
+$[ident]<Filter
+$[ident]$[TAB]Name="$[name]"
+$[ident]$[TAB]Filter="">
+#endif
+  #define local_files
+  #define treated_file
+  #if $[tree]
+    #while $[> $[length $[files]],0]
+      #define file $[firstword $[files]]
+      #if $[isfullpath $[file]]
+        #set treated_file $[notdir $[file]]
+      #else
+        #set treated_file $[file]
+      #endif
+        
+      #define file_split $[split /,$[treated_file]]
+      #if $[> $[words $[file_split]],1]
+        #define sub_dir $[firstword $[file_split]]
+        #define sub_files $[patsubst $[sub_dir]/%,%,$[filter $[sub_dir]/%,$[files]]]
+        #call emit_project_structure_comp_files $[sub_files],\
+                                                  $[sub_dir],\
+                                                  $[opt_levels],\
+                                                  $[+ $[indent],1],\
+                                                  $[if $[cumulative_dir],$[cumulative_dir]/$[sub_dir],$[sub_dir]],$[tree]
+        #set files $[filter-out $[sub_dir]/%,$[files]]
+      #else
+        #set local_files $[local_files] $[file]
+        #if $[= $[words $[files]],1]
+          #set files
+        #else
+          #set files $[substr $[+ $[length $[file]], 2], $[length $[files]], $[files]]
+        #endif
+      #endif
+    #end $[> $[length $[files]],0]
+  #else
+    #set local_files $[files]
+  #endif
+  #foreach file $[local_files]
+$[ident]$[TAB]<File
+    #define local_file $[if $[cumulative_dir],$[cumulative_dir]/]$[file]
+    #define out_file $[make_path_absolute_if_needed $[file],$[TOPDIR]/$[PATH]$[if $[cumulative_dir],/$[cumulative_dir]]]
+    #set out_file $[osfilename $[out_file]]
+$[ident]$[TAB]$[TAB]RelativePath="$[out_file]">
+    #if $[or $[findstring $[local_file],$[NOPRECOMP_SOURCES]],$[and $[precomp_filename], $[ne $[patsubst %.c,%.iscfile,$[file] ], $[file]] ] ]
+      #foreach opt $[opt_levels]
+  $[ident]$[TAB]$[TAB]<FileConfiguration
+  $[ident]$[TAB]$[TAB]$[TAB]Name="$[opt]|Win32">
+  $[ident]$[TAB]$[TAB]$[TAB]<Tool
+  $[ident]$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCLCompilerTool"
+  $[ident]$[TAB]$[TAB]$[TAB]$[TAB]UsePrecompiledHeader="0"/>
+  $[ident]$[TAB]$[TAB]</FileConfiguration>
+      #end opt
+    #elif $[and $[ne $[DEBUGOPT_DISABLE], 1], $[findstring $[local_file],$[DEBUGOPT_SOURCES]]]
+  $[ident]$[TAB]$[TAB]<FileConfiguration
+  $[ident]$[TAB]$[TAB]$[TAB]Name="debug|Win32">
+  $[ident]$[TAB]$[TAB]$[TAB]<Tool
+  $[ident]$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCLCompilerTool"
+  $[ident]$[TAB]$[TAB]$[TAB]$[TAB]Optimization="2"
+  $[ident]$[TAB]$[TAB]$[TAB]$[TAB]GlobalOptimizations="TRUE"
+  $[ident]$[TAB]$[TAB]$[TAB]$[TAB]InlineFunctionExpansion="2"
+  $[ident]$[TAB]$[TAB]$[TAB]$[TAB]FavorSizeOrSpeed="1"
+  $[ident]$[TAB]$[TAB]$[TAB]$[TAB]OmitFramePointers="TRUE"
+  $[ident]$[TAB]$[TAB]$[TAB]$[TAB]UsePrecompiledHeader="0"/>
+  $[ident]$[TAB]$[TAB]</FileConfiguration>
+    #endif
+$[ident]$[TAB]</File>
+  #end file
+#if $[name]
+$[ident]</Filter>
+#endif
+#end emit_project_structure_comp_files
+
+
+//
+// Emit a filter block for files that are compiled with a custom build rule.
+//
+#defsub emit_project_custom_build_files files,name,rule_defun,outputs_defun,opt_levels
+  #if $[files]
+$[TAB]$[TAB]<Filter
+$[TAB]$[TAB]$[TAB]Name="$[name]"
+$[TAB]$[TAB]$[TAB]Filter="">
+    #foreach file $[files]
+$[TAB]$[TAB]$[TAB]<File
+$[TAB]$[TAB]$[TAB]$[TAB]RelativePath="$[osfilename $[make_path_absolute_if_needed $[file],$[TOPDIR]/$[PATH]]]">
+      #foreach opt $[opt_levels]
+$[TAB]$[TAB]$[TAB]$[TAB]<FileConfiguration
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name="$[opt]|Win32">
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCustomBuildTool"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Description="Running $[name] on $[file] ..."
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]CommandLine="$[$[rule_defun] $[file]]"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]AdditionalDependencies=""
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Outputs="$[$[outputs_defun] $[file]]"/>
+$[TAB]$[TAB]$[TAB]$[TAB]</FileConfiguration>
+      #end opt
+$[TAB]$[TAB]$[TAB]</File>
+    #end file
+$[TAB]$[TAB]</Filter>
+  #endif
+#end emit_project_custom_build_files
+
+
+//
+// Emit a filter block for files that are platform-specific.  Only compile the ones
+// for this platform.
+//
+#defsub emit_project_platform_files files,opt_levels
+  #define local_files
+  #foreach file $[files]
+    #if $[isfile $[file]]
+      #set local_files $[local_files] $[file]
+    #endif
+  #end file
+  #if $[local_files]
+$[TAB]$[TAB]<Filter
+$[TAB]$[TAB]$[TAB]Name="Platform"
+$[TAB]$[TAB]$[TAB]Filter="">
+    #define known_files
+    #foreach plat $[downcase $[KNOWN_PLATFORMS]]
+      #define plat_files $[filter $[plat]/%,$[local_files]]
+      #if $[plat_files]
+        #set known_files $[known_files] $[plat_files]
+$[TAB]$[TAB]$[TAB]<Filter
+$[TAB]$[TAB]$[TAB]$[TAB]Name="$[plat]"
+$[TAB]$[TAB]$[TAB]$[TAB]Filter="">
+        #foreach file $[plat_files]
+$[TAB]$[TAB]$[TAB]$[TAB]<File
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]RelativePath="$[osfilename $[make_path_absolute_if_needed $[file],$[TOPDIR]/$[PATH]]]">
+          #if $[ne $[downcase $[PLATFORM]],$[plat]]
+            #foreach opt $[opt_levels]
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]<FileConfiguration
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name="$[opt]|Win32"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]ExcludedFromBuild="TRUE">
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCustomBuildTool"/>
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]</FileConfiguration>
+            #end opt
+          #endif
+$[TAB]$[TAB]$[TAB]$[TAB]</File>
+        #end file
+$[TAB]$[TAB]$[TAB]</Filter>
+      #endif // $[plat_files]
+    #end plat
+    #define leftover_files $[filter-out $[known_files],$[local_files]]
+    #if $[leftover_files]
+$[TAB]$[TAB]$[TAB]<Filter
+$[TAB]$[TAB]$[TAB]$[TAB]Name="Unknown"
+$[TAB]$[TAB]$[TAB]$[TAB]Filter="">
+      #foreach file $[leftover_files]
+$[TAB]$[TAB]$[TAB]$[TAB]<File
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]RelativePath="$[osfilename $[make_path_absolute_if_needed $[file],$[TOPDIR]/$[PATH]]]">
+        #foreach opt $[opt_levels]
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]<FileConfiguration
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name="$[opt]|Win32"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]ExcludeFromBuild="TRUE">
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCustomBuildTool"/>
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]</FileConfiguration>
+        #end opt
+$[TAB]$[TAB]$[TAB]$[TAB]</File>
+      #end file
+$[TAB]$[TAB]$[TAB]</Filter>
+    #endif // $[leftover_files]
+$[TAB]$[TAB]</Filter>
+  #endif // $[local_files]
+#end emit_project_platform_files
+
+
+//
+// Emit the section of a .vcproj that identifies the component files
+//
+#defsub emit_project_files regular_files,build_files,perl_files,swig_files,das_files,nasm_files,\
+        cxxtest_files,tolua_files,precomp_file,misc_files,orphan_files,platform_files,idl_files,opt_lev
+$[TAB]<Files>
+  // First, the files related to the build system itself
+  #if $[build_files]
+    #call emit_project_nocomp_files $[build_files],Build,$[opt_lev]
+  #endif
+  // Das files come early because we want the generated sources to get
+  // generated before they're needed.
+  #call emit_project_custom_build_files $[das_files],Daspc,daspc_command,daspc_outputs,$[opt_lev]
+  // Nasm files
+  #call emit_project_custom_build_files $[nasm_files],Nasm,nasm_command,nasm_outputs,$[opt_lev]
+  // Cxxtest files
+  #call emit_project_custom_build_files $[cxxtest_files],Cxxtest,cxxtest_command,cxxtest_outputs,$[opt_lev]
+  // tolua files
+  #call emit_project_custom_build_files $[tolua_files],tolua,tolua_command,tolua_outputs,$[opt_lev]
+  // swig files
+  #call emit_project_custom_build_files $[swig_files],swig,swig_command,swig_outputs,$[opt_lev]
+  // Then perl files
+  #if $[perl_files]
+    #call emit_project_structure_nocomp_files $[perl_files],Perl,$[opt_lev],2,
+  #endif
+  // Idl files
+  #if $[idl_files]
+    #call emit_project_structure_simplecomp_files $[idl_files],Idl,$[opt_lev],2,
+  #endif
+  // Next the misc files
+  #if $[and $[not $[SKIP_MISC]], $[misc_files]]
+    #call emit_project_structure_nocomp_files $[misc_files],Misc,$[opt_lev],2,
+  #endif
+  // How about platform-specific files
+  #if $[platform_files]
+    #call emit_project_platform_files $[platform_files],$[opt_lev]
+  #endif
+  // Then orphaned files
+  #if $[and $[not $[SKIP_ORPHANS]], $[orphan_files]]
+    #call emit_project_structure_nocomp_files $[orphan_files],Orphans,$[opt_lev],2,
+  #endif
+  // Now, do the compileable files
+  #if $[regular_files]
+    #define local_reg $[unique $[foreach fle,$[sort $[notdir $[regular_files]]],$[filter %$[fle],$[regular_files]]]]
+
+    #if $[= $[OCONFIG_MSVC_TREE], 1]
+      #set local_reg $[sort $[local_reg]]
+    #endif
+    #call emit_project_structure_comp_files $[local_reg],,$[opt_lev],2,,$[= $[OCONFIG_MSVC_TREE], 1]
+  #endif // $[regular_files]
+  // Next, the generated precompiled header files
+  #if $[precomp_file]
+$[TAB]$[TAB]<File
+$[TAB]$[TAB]$[TAB]RelativePath="$[osfilename $[ODIR]/$[PATH]/$[precomp_file]]">
+$[TAB]$[TAB]</File>
+$[TAB]$[TAB]<File
+$[TAB]$[TAB]$[TAB]RelativePath="$[osfilename $[ODIR]/$[PATH]/$[precomp_file:%.h=%.cpp]]">
+    #foreach opt $[opt_lev]
+$[TAB]$[TAB]$[TAB]<FileConfiguration
+$[TAB]$[TAB]$[TAB]$[TAB]Name="$[opt]|Win32">
+$[TAB]$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCLCompilerTool"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]UsePrecompiledHeader="1"/>
+$[TAB]$[TAB]$[TAB]</FileConfiguration>
+    #end opt
+$[TAB]$[TAB]</File>
+  #endif // $[precomp_file]
+$[TAB]</Files>
+#end emit_project_files
+
+
+//
+// Emit the closing block of a .vcproj file
+//
+#defsub emit_vcproject_postscript
+$[TAB]<Globals>
+$[TAB]</Globals>
+</VisualStudioProject>
+#end emit_vcproject_postscript
+
+
+//
+// Emit the standard start of a .csproj file
+//
+#defsub emit_csproject_preamble name,guid
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject>
+$[TAB]<CSHARP
+$[TAB]$[TAB]ProjectType = "Local"
+$[TAB]$[TAB]ProjectVersion = "7.10.3077"
+$[TAB]$[TAB]SchemaVersion = "2.0"
+$[TAB]$[TAB]ProjectGuid = "$[guid]"
+$[TAB]>
+#end emit_csproject_preamble
+
+
+//
+// Emit build common block of a .csproj file
+//
+#defsub emit_csproject_build_preamble
+$[TAB]$[TAB]<Build>
+#end emit_csproject_build_preamble
+
+
+//
+// Emit compilation preable for a .csproj file
+//
+#defsub emit_csproject_compile_preamble name
+$[TAB]$[TAB]$[TAB]<Settings
+$[TAB]$[TAB]$[TAB]$[TAB]ApplicationIcon = ""  // TODO: perhaps support this
+$[TAB]$[TAB]$[TAB]$[TAB]AssemblyKeyContainerName = ""
+$[TAB]$[TAB]$[TAB]$[TAB]AssemblyName = "$[name]"
+$[TAB]$[TAB]$[TAB]$[TAB]AssemblyOriginatorKeyFile = ""
+$[TAB]$[TAB]$[TAB]$[TAB]DefaultClientScript = "JScript"
+$[TAB]$[TAB]$[TAB]$[TAB]DefaultHTMLPageLayout = "Grid"
+$[TAB]$[TAB]$[TAB]$[TAB]DefaultTargetSchema = "IE50"
+$[TAB]$[TAB]$[TAB]$[TAB]DelaySign = "false"
+$[TAB]$[TAB]$[TAB]$[TAB]OutputType = "WinExe"  // TODO: need to change this if we are doing DLLs
+$[TAB]$[TAB]$[TAB]$[TAB]PreBuildEvent = ""
+$[TAB]$[TAB]$[TAB]$[TAB]PostBuildEvent = ""
+$[TAB]$[TAB]$[TAB]$[TAB]RootNamespace = "$[name]"
+$[TAB]$[TAB]$[TAB]$[TAB]RunPostBuildEvent = "OnBuildSuccess"
+$[TAB]$[TAB]$[TAB]$[TAB]StartupObject = ""
+$[TAB]$[TAB]$[TAB]>
+#end emit_csproject_compile_preamble
+
+
+//
+// Emit compilation instructions for a .csproj file
+//
+#defsub emit_csproject_compiler opt,ipath,defines,precomp_file,flags
+$[TAB]$[TAB]$[TAB]$[TAB]<Config
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name = "$[opt]"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]AllowUnsafeBlocks = "false"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]BaseAddress = "0"  // only used for DLLs, TODO: fix when we do csharp DLLs
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]CheckForOverflowUnderflow = "false"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]ConfigurationOverrideFile = ""
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]DefineConstants = ""  // TODO: put defines in here separated by ;
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]DocumentationFile = ""
+  #if $[eq $[opt],release]
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]DebugSymbols = "false"
+  #else
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]DebugSymbols = "true"
+  #endif
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]FileAlignment = "4096"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]IncrementalBuild = "false"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]NoStdLib = "false"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]NoWarn = ""
+  #if $[eq $[opt],debug]
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Optimize = "false"
+  #else
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Optimize = "true'
+  #endif
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]OutputPath = ""  // TODO: fill in the path
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]RegisterForComInterop = "false"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]RemoveIntegerChecks = "false"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]TreatWarningsAsErrors = "true"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]WarningLevel = "4"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+#end emit_csproject_compiler
+
+
+//
+// Emit compilation postscript for a .csproj file
+//
+#defsub emit_csproject_compile_postscript
+$[TAB]$[TAB]$[TAB]</Settings>
+#end emit_csproject_compile_postscript
+
+
+//
+// Emit linkage preamble for a .csproj file
+//
+#defsub emit_csproject_link_preamble
+$[TAB]$[TAB]$[TAB]<References>
+$[TAB]$[TAB]$[TAB]$[TAB]<Reference
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name = "System"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]AssemblyName = "System"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]HintPath = "..\..\..\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.dll"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]$[TAB]<Reference
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name = "System.Data"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]AssemblyName = "System.Data"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]HintPath = "..\..\..\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.Data.dll"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]$[TAB]<Reference
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name = "System.Drawing"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]AssemblyName = "System.Drawing"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]HintPath = "..\..\..\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.Drawing.dll"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]$[TAB]<Reference
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name = "System.Windows.Forms"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]AssemblyName = "System.Windows.Forms"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]HintPath = "..\..\..\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.Windows.Forms.dll"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]$[TAB]<Reference
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]Name = "System.XML"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]AssemblyName = "System.XML"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]HintPath = "..\..\..\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.XML.dll"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+#end emit_csproject_link_preamble
+
+
+//
+// Emit a link directive for a .csproj file
+//
+#defsub emit_csproject_linker opt,build,is_bin,target,depends,lpath,bindir,ignore_default_library_names,is_dynlib
+  // TODO: might need something in here
+#end emit_csproject_linker
+
+
+//
+// Emit linkage postscript for a .csproj file
+//
+#defsub emit_csproj_link_postscript
+$[TAB]$[TAB]$[TAB]</References>
+#end emit_csproj_link_postscript
+
+
+//
+// Emit build close block of a .csproj file
+//
+#defsub emit_csproject_build_postscript
+$[TAB]$[TAB]</Build>
+#end emit_csproject_build_postscript
+
+
+//
+// Emit files for a .csproj file
+//
+#defsub emit_csproject_files regular_files,build_files,perl_files,swig_files,das_files,nasm_files,\
+        cxxtest_files,tolua_files,precomp_file,misc_files,orphan_files,platform_files,opt_lev
+$[TAB]$[TAB]<Files>
+$[TAB]$[TAB]$[TAB]<Include>
+  #foreach file $[filter %.cs,$[regular_files]]
+$[TAB]$[TAB]$[TAB]$[TAB]<File
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]RelPath = "$[file]"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]BuildAction = "Compile"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+  #end file
+  #foreach file $[filter %.resx,$[regular_files]]
+$[TAB]$[TAB]$[TAB]$[TAB]<File
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]RelPath = "$[file]"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]BuildAction = "EmbeddedResource"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+  #end file
+  #foreach file $[filter %.ico,$[regular_files]]
+$[TAB]$[TAB]$[TAB]$[TAB]<File
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]RelPath = "$[file]"
+$[TAB]$[TAB]$[TAB]$[TAB]$[TAB]BuildAction = "Content"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+  #end file
+$[TAB]$[TAB]$[TAB]</Include>
+$[TAB]$[TAB]</Files>
+#end emit_csproject_files
+
+
+//
+// Emit the closing blcok of a .csproj file
+//
+#defsub emit_csproject_postscript
+$[TAB]</CSHARP>
+</VisualStudioProject>
+#end emit_csproject_postscript

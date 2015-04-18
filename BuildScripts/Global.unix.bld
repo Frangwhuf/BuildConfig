@@ -1,0 +1,15 @@
+//
+// Global.unix.bld
+//
+// This file is read in before any of the individual Sources.bld files
+// are read.  It defines a few global variables to assist
+// Template.msvc.bld.
+
+#define REQUIRED_OCONFIG_VERSION 1.7
+
+#if $[< $[OCONFIG_VERSION],$[REQUIRED_OCONFIG_VERSION]]
+  #error You need at least oconfig version $[REQUIRED_OCONFIG_VERSION] to use BUILD_TYPE msvc.
+#endif
+
+#sinclude $[BUILD_SCRIPTS]/compilerSettings.bld
+#sinclude $[BUILD_SCRIPTS]/compilerSettings.$[BUILD_TYPE].bld

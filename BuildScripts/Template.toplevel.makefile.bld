@@ -1,0 +1,463 @@
+//
+// Template.toplevel.makefile.bld
+//
+// This file defines the set of output files that will be generated to
+// support a makefile build system for unix.
+//
+// Before this file is processed, the following files are read and
+// processed (in order):
+//
+// The Depot.bld file in the root of the current source hierarchy
+//   (e.g. C:\o\trunk\olive\Depot.bld)
+// <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
+// <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)
+// The user's OCONFIG_CONFIG file. (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/System.bld (included from <TOOL>/Depot.bld)
+// All of the Sources.bld files in the current source hierarchy (read by oconfig)
+// <TOOL>/oconfig/bldtempl/Global.bld (name defined in System.bld (GLOBAL_FILE), read by oconfig)
+// <TOOL>/oconfig/bldtempl/TreeSetup.bld
+// <TOOL>/oconfig/bldtempl/Global.<PLATFORM>.bld (name defined in System.bld (GLOBAL_TYPE_FILE), included from Global.bld)
+// <TOOL>/oconfig/bldtempl/Depends.bld  (once for each Sources.bld file, name defined in System.bld (DEPENDS_FILE),
+//                                       read by oconfig)
+// <TOOL>/oconfig/bldtempl/Template.bld
+// <TOOL>/oconfig/bldtempl/Template.unix.bld
+// <TOOL>/oconfig/bldtempl/Template.toplevel.bld
+// <TOOL>/oconfig/bldtempl/Template.toplevel.<PLATFORM>.bld (once for each Sources.bld file,
+//                                                           name defined in System.bld (TEMPLATE_FILE),
+//                                                           read by oconfig)
+// <TOOL>/oconfig/bldtempl/Template.toplevel.makefile.bld (this file)
+
+#define project_scopes */lib_target */noinst_lib_target */test_lib_target */bin_target */noinst_bin_target */test_bin_target
+
+// Pre-compiled headers are neat!  Really!
+#forscopes $[project_scopes]
+  #if $[DO_PCH]
+    #if $[ne $[PRECOMPILE_HEADERS],]
+      #define precomp_filename $[TARGET]precompiled
+      #define precomp_target $[precomp_filename].gch
+      #define precomp_h_filename $[precomp_filename].h
+      #define precomp_c_filename $[precomp_filename].cpp
+      #output $[TOPDIR]/$[PATH]/$[precomp_h_filename] notouch
+        #format straight
+        #call emit_file_header c
+        #foreach file $[unique $[PRECOMPILE_HEADERS]]
+##include <$[file]>
+        #end file
+      #end $[TOPDIR]/$[PATH]/$[precomp_h_filename]
+    #endif // $[PRECOMPILE_HEADERS]
+  #endif // $[DO_PCH]
+#end $[project_scopes]
+
+// These are the complete set of extra flags the compiler requires
+#defer cflags $[get_cflags] $[CFLAGS] $[CFLAGS_OPT_$[upcase $[opt]]] $[EXTRA_DEFINES:%=-D%]
+#defer c++flags $[get_cflags] $[C++FLAGS] $[C++FLAGS_OPT_$[upcase $[opt]]] $[EXTRA_DEFINES:%=-D%]
+#defer ldflags $[get_lflags] $[LDFLAGS] $[LDFLAGS_OPT_$[upcase $[OPT]]]
+
+#defer ipath $[sort $[TOPDIR]/inc $[get_ipath]]
+
+// $[lpath] is the list of directories we should add to our -L list from
+// the contect of a particular target
+#defer lpath $[TOPDIR]/lib $[get_lpath]
+
+#define depot_makefile $[TOPDIR]/Makefile
+#output $[depot_makefile] notouch
+#format makefile
+#call emit_file_header makefile
+BIT_SIZE = $(shell getconf LONG_BIT)
+TOPDIR = $[TOPDIR]
+
+##############################
+## General building targets ##
+##############################
+
+.PHONY: all allall static staticall $[OPTIMIZATION_LEVELS] $[OPTIMIZATION_LEVELS:%=static-%]
+all : makedirs debug static-debug
+$[TAB]@echo Done building debug level of $[DEPOT].
+allall : makedirs $[OPTIMIZATION_LEVELS] $[OPTIMIZATION_LEVELS:%=static-%]
+$[TAB]@echo Done building all build levels of $[DEPOT].
+static : makedirs static-debug
+$[TAB]@echo Done building static at debug level of $[DEPOT].
+staticall : makedirs $[OPTIMIZATION_LEVELS:%=static-%]
+$[TAB]@echo Done building static at all build levels of $[DEPOT].
+#foreach opt $[OPTIMIZATION_LEVELS]
+$[opt] :
+$[TAB]@echo Finished building $[opt].
+static-$[opt] :
+$[TAB]@echo Finished building static $[opt].
+#end opt
+
+##############################
+## General cleaning targets ##
+##############################
+
+.PHONY: clean cleanall
+clean : clean-debug
+cleanall : $[OPTIMIZATION_LEVELS:%=clean-%]
+#foreach opt $[OPTIMIZATION_LEVELS]
+clean-$[opt] :
+$[TAB]@echo Finished cleaning $[opt].
+#end opt
+
+################################
+## General installing targets ##
+################################
+
+.PHONY: install installall install-headers $[OPTIMIZATION_LEVELS:%=install-%] uninstall uninstallall $[OPTIMIZATION_LEVELS:%=uninstall-%]
+install : install-headers install-debug
+installall : install-headers $[OPTIMIZATION_LEVELS:%=install-%]
+install-headers : | makedirs
+$[TAB]@echo Finished installing public headers.
+#foreach opt $[OPTIMIZATION_LEVELS]
+install-$[opt] :
+$[TAB]@echo Finished installing $[opt].
+#end opt
+uninstall : uninstall-debug
+uninstallall : $[OPTIMIZATION_LEVELS:%=uninstall-%]
+#foreach opt $[OPTIMIZATION_LEVELS]
+uninstall-$[opt] :
+$[TAB]@echo Finished uninstalling $[opt].
+#end opt
+
+##########################################
+## Create important directory structure ##
+##########################################
+
+makedirs : $(TOPDIR)/bin $(TOPDIR)/doc $(TOPDIR)/etc $(TOPDIR)/inc $(TOPDIR)/lib
+
+$(TOPDIR)/bin :
+$[TAB]mkdir $(TOPDIR)/bin
+$(TOPDIR)/doc :
+$[TAB]mkdir $(TOPDIR)/doc
+$(TOPDIR)/etc :
+$[TAB]mkdir $(TOPDIR)/etc
+$(TOPDIR)/inc :
+$[TAB]mkdir $(TOPDIR)/inc
+$(TOPDIR)/lib :
+$[TAB]mkdir $(TOPDIR)/lib
+
+#map source_projects
+#forscopes $[project_scopes]
+  #foreach file $[unique $[sort $[c_sources] $[cxx_sources] $[install_headers] $[header_sources]]]
+    #addmap source_projects $[standardize $[PATH]/$[file]]
+  #end file
+#end $[project_scopes]
+
+#defun get_header_depends source
+  #define foo $[source_projects $[install_headers],$[source]]
+  #define bar $[source_projects $[PATH]/,$[source]]
+  #define ret
+  #if $[ne $[bar],]
+    #set bar $[subst $[bar],,$[source]]
+    #if $[ne $[filter $[bar],$[foo]],]
+      #set ret $[TOPDIR]/inc/$[bar]
+    #endif
+  #endif
+  $[ret]
+#end get_header_depends
+
+// Now emit instructions for each project/target.  We opt for a single
+// 'master' makefile rather then per-project makefiles as that not only
+// oerates much faster, but allows GNU make to better parallelize the
+// build.
+
+#forscopes $[project_scopes]
+  #if $[ne $[SOURCES],]
+###########
+## project: $[TARGET]
+###########
+
+.PHONY: $[TARGET] static-$[TARGET] clean-$[TARGET]
+$[TARGET] : $[TARGET]-debug
+static-$[TARGET] : static-$[TARGET]-debug
+clean-$[TARGET]: clean-$[TARGET]-debug
+
+    #define is_dynlib $[and $[or $[eq $[THISSCOPENAME],$[PATH]/lib_target],$[eq $[THISSCOPENAME],$[PATH]/noinst_lib_target],$[eq $[THISSCOPENAME],$[PATH]/test_lib_target]],$[eq $[STATIC],]]
+    #define is_test $[or $[eq $[THISSCOPENAME],$[PATH]/test_bin_target],$[eq $[THISSCOPENAME],$[PATH]/test_lib_target]]
+    #define is_bin $[if $[filter %bin_target,$[THISSCOPENAME]],1]
+
+    #set install_headers $[install_headers]
+    #if $[ne $[install_headers],]
+##
+## public headers
+##
+
+.PHONY : $[install_headers:%=uninstall-$[TOPDIR]/inc/%]
+      #foreach head $[install_headers]
+        #define head_target $[TOPDIR]/inc/$[head]
+        #define local $[TOPDIR]/$[PATH]/$[head]
+        #define dest $[head_target]
+$[head_target] : $[TOPDIR]/$[PATH]/$[head]
+$[TAB]$[INSTALL_DIR]
+$[TAB]$[INSTALL]
+
+uninstall-$[head_target] :
+$[TAB]@if test -f $[head_target]; then rm $[head_target]; fi;
+
+      #end head
+
+    #endif
+.PHONY : install-$[TARGET]-headers uninstall-$[TARGET]-headers
+install-$[TARGET]-headers : $[install_headers:%=$[TOPDIR]/inc/%]
+uninstall-$[TARGET]-headers : $[install_headers:%=uninstall-$[TOPDIR]/inc/%]
+
+install-headers : install-$[TARGET]-headers
+uninstall-headers : uninstall-$[TARGET]-headers
+
+## Dependencies
+    #foreach file $[sort $[c_sources] $[cxx_sources]]
+##
+## $[standardize $[PATH]/$[file]] :
+      #foreach dep $[get_depends $[standardize $[PATH]/$[file]]]
+##$[TAB]$[dep]  ($[source_projects $[TARGET],$[dep]])
+      #end dep
+    #end file
+
+    #foreach opt $[OPTIMIZATION_LEVELS]
+      #define objs_to_link
+##
+## $[opt]
+##
+
+      // precompiled header
+      #if $[ne $[precomp_filename],]
+        #define target $[TOPDIR]/$[PATH]/$[opt]/$[precomp_target]
+        #define source $[TOPDIR]/$[PATH]/$[precomp_h_filename]
+        #define ipath $[ipath]
+        #define flags $[c++flags]
+        #define dep_target $[TOPDIR]/$[PATH]/$[opt]/$[patsubst %gch,%d,$[precomp_target]]
+        #define deps
+        #foreach d $[PRECOMPILE_HEADERS]
+          #define foo $[get_header_depends $[PATH]/$[d]]
+          #if $[ne $[foo],]
+            #set deps $[deps] $[foo]
+          #endif // $[ne $[foo],]
+        #end d
+$[target] : $[source] $[deps] $[TOPDIR]/Makefile | $[TOPDIR]/$[PATH]/$[opt]
+$[TAB]$[COMPILE_C++]
+
+.PHONY : clean-$[target]
+clean-$[target] :
+$[TAB]@if test -f $[target]; then rm $[target]; fi;
+$[TAB]@if test -f $[dep_target]; then rm $[dep_target]; fi;
+clean-$[TARGET]-$[opt] : clean-$[target]
+
+-include $[dep_target]
+
+      #endif // $[ne $[precomp_file],]
+
+      #foreach file $[sort $[c_sources]]
+        #define target $[TOPDIR]/$[PATH]/$[opt]/$[notdir $[$[file]_obj]]
+        #define objs_to_link $[objs_to_link] $[target]
+        #define dep_target $[TOPDIR]/$[PATH]/$[opt]/$[patsubst %$[OBJ],%.d,$[notdir $[$[file]_obj]]]
+        #define source $[TOPDIR]/$[PATH]/$[file]
+        #define ipath $[ipath]
+        #define flags $[cflags]
+        #define deps
+        #foreach d $[get_depends $[standardize $[PATH]/$[file]]]
+	  #define foo $[get_header_depends $[d]]
+          #if $[ne $[foo],]
+            #set deps $[deps] $[foo]
+          #endif
+        #end d
+$[target] : $[source] $[deps] $[if $[ne $[precomp_filename],],$[TOPDIR]/$[PATH]/$[opt]/$[precomp_target]] $[TOPDIR]/Makefile | $[TOPDIR]/$[PATH]/$[opt]
+$[TAB]$[COMPILE_C]
+
+.PHONY : clean-$[target]
+clean-$[target] :
+$[TAB]@if test -f $[target]; then rm $[target]; fi;
+$[TAB]@if test -f $[dep_target]; then rm $[dep_target]; fi;
+clean-$[TARGET]-$[opt] : clean-$[target]
+
+-include $[dep_target]
+
+      #end file
+      #foreach file $[sort $[cxx_sources]]
+        #define target $[TOPDIR]/$[PATH]/$[opt]/$[notdir $[$[file]_obj]]
+        #define objs_to_link $[objs_to_link] $[target]
+        #define dep_target $[TOPDIR]/$[PATH]/$[opt]/$[patsubst %$[OBJ],%.d,$[notdir $[$[file]_obj]]]
+        #define source $[TOPDIR]/$[PATH]/$[file]
+        #define ipath $[ipath]
+        #define flags $[c++flags]
+        #define deps
+        #foreach d $[get_depends $[standardize $[PATH]/$[file]]]
+	  #define foo $[get_header_depends $[d]]
+          #if $[ne $[foo],]
+            #set deps $[deps] $[foo]
+          #endif
+        #end d
+$[target] : $[source] $[deps] $[if $[ne $[precomp_filename],],$[TOPDIR]/$[PATH]/$[opt]/$[precomp_target]] $[TOPDIR]/Makefile | $[TOPDIR]/$[PATH]/$[opt]
+$[TAB]$[COMPILE_C++]
+
+.PHONY : clean-$[target]
+clean-$[target] :
+$[TAB]@if test -f $[target]; then rm $[target]; fi;
+$[TAB]@if test -f $[dep_target]; then rm $[dep_target]; fi;
+clean-$[TARGET]-$[opt] : clean-$[target]
+
+-include $[dep_target]
+
+      #end file
+
+$[TOPDIR]/$[PATH]/$[opt] :
+$[TAB]mkdir $[TOPDIR]/$[PATH]/$[opt]
+makedirs : $[TOPDIR]/$[PATH]/$[opt]
+
+      #define sources $[objs_to_link]
+      #define cc_ld $[CC]
+      #define cxx_ld $[CXX]
+      #if $[is_dynlib]
+        #define target $[TOPDIR]/$[PATH]/$[opt]/lib$[LIB_BASENAME]$[OPT_SUFFIX_$[upcase $[opt]]].so
+        #define static_target $[patsubst %.so,%.a,$[target]]
+      #elif $[is_bin]
+        #define target $[TOPDIR]/$[PATH]/$[opt]/$[TARGET]$[OPT_SUFFIX_$[upcase $[opt]]]
+        #define static_target $[target]-static
+      #else
+        // hopefully this is a static lib
+        #define target $[TOPDIR]/$[PATH]/$[opt]/lib$[LIB_BASENAME]$[OPT_SUFFIX_$[upcase $[opt]]].a
+        #define static_target $[target]
+      #endif
+      #define flags $[ldflags] $[if $[ne $[cxx_sources],],$[LD++FLAGS]]
+      #define lpath $[sort $[lpath]]
+      #define proj_deps
+      #define proj_libs $[OTHER_LIBS]
+      #foreach d $[get_depends $[standardize $[PATH]/$[file]]]
+        #define foo $[source_projects $[TARGET],$[d]]
+        #if $[ne $[foo],]
+          #set proj_deps $[proj_deps] $[foo]
+        #endif
+	#if $[eq $[source_projects $[is_bin],$[d]],]
+          #define bar $[source_projects $[LIB_BASENAME],$[d]]
+          #if $[and $[ne $[bar],],$[ne $[bar],$[TARGET]]]
+            #set proj_libs $[proj_libs] $[bar]$[OPT_SUFFIX_$[upcase $[opt]]]
+          #endif
+	#endif
+      #end d
+      #if $[ne $[proj_deps],]
+        #set proj_deps $[sort $[filter-out $[TARGET],$[proj_deps]]]
+      #endif
+      #if $[ne $[proj_libs],]
+        #set proj_libs $[sort $[proj_libs]]
+        #define linked_libs $[proj_libs]
+      #endif
+.PHONY: $[TARGET]-$[opt] static-$[TARGET]-$[opt] clean-$[TARGET]-$[opt] install-$[TARGET]-$[opt] install-static-$[TARGET]-$[opt] uninstall-$[TARGET]-$[opt] uninstall-static-$[TARGET]-$[opt]
+$[TARGET]-$[opt] : $[target]
+static-$[TARGET]-$[opt] : $[static_target]
+
+$[target] : install-$[TARGET]-headers $[sources] $[proj_deps:%=install-%-$[opt]] $[if $[eq $[target],$[static_target]],$[proj_deps:%=install-static-%-$[opt]]] $[TOPDIR]/Makefile
+      #if $[is_dynlib]
+$[TAB]$[SHARED_LIB_C++]
+      #elif $[is_bin]
+$[TAB]$[LINK_BIN_C++]
+        #if $[ne $[STRIP_$[upcase $[opt]]],]
+$[TAB]$[STRIP_$[upcase $[opt]]] $[target]
+        #endif
+      #else
+        // hopefully this is a static lib
+$[TAB]$[STATIC_LIB_C++]
+      #endif
+
+      #if $[ne $[target],$[static_target]]
+        #define special_proj_libs pthread rt
+        #foreach d $[get_depends $[standardize $[PATH]/$[file]]]
+          #if $[eq $[source_projects $[is_bin],$[d]],]
+            #set special_proj_libs $[special_proj_libs] $[source_projects $[OTHER_LIBS],$[d]]
+          #endif
+        #end d
+        #if $[ne $[proj_libs],]
+          #set proj_libs $[sort $[proj_libs]]
+          #define linked_libs $[proj_libs]
+        #endif
+        #if $[ne $[special_proj_libs],]
+          #set special_proj_libs $[sort $[special_proj_libs]]
+          #define special_linked_libs $[special_proj_libs]
+        #endif
+$[static_target] : install-$[TARGET]-headers $[sources] $[proj_deps:%=install-static-%-$[opt]] $[TOPDIR]/Makefile
+        #define target_save $[target]
+        #set target $[static_target]
+        #if $[is_dynlib]
+$[TAB]$[STATIC_LIB_C++]
+        #elif $[is_bin]
+$[TAB]$[STATIC_LINK_BIN_C++]
+          #if $[ne $[STRIP_$[upcase $[opt]]],]
+$[TAB]$[STRIP_$[upcase $[opt]]] $[target]
+          #endif
+        #else
+        // hopefully this is a static lib
+$[TAB]$[STATIC_LIB_C++]
+        #endif
+        #set target $[target_save]
+      #endif
+
+$[opt] : $[TARGET]-$[opt]
+static-$[opt] : static-$[TARGET]-$[opt]
+
+clean-$[TARGET]-$[opt] : uninstall-$[TARGET]-headers $[patsubst %,clean-%,$[sources]]
+$[TAB]@if test -f $[target]; then rm $[target]; fi;
+$[TAB]@if test -f $[static_target]; then rm $[static_target]; fi;
+$[TAB]@echo Cleaned $[opt] $[TARGET].
+clean-$[opt] : clean-$[TARGET]-$[opt]
+
+      #define target_dest $[notdir $[target]]
+      #define static_target_dest $[notdir $[static_target]]
+      #if $[is_bin]
+        #set target_dest $[TOPDIR]/bin/$[target_dest]
+        #set static_target_dest $[TOPDIR]/bin/$[static_target_dest]
+      #else
+        #set target_dest $[TOPDIR]/lib/$[target_dest]
+        #set static_target_dest $[TOPDIR]/lib/$[static_target_dest]
+      #endif
+$[target_dest] : $[target]
+      #define local $[target]
+      #define dest $[target_dest]
+      #if $[is_bin]
+$[TAB]$[INSTALL_PROG]
+      #else
+$[TAB]$[INSTALL]
+      #endif
+
+      #if $[ne $[target],$[static_target]]
+$[static_target_dest] : $[static_target]
+        #set local $[static_target]
+        #set dest $[static_target_dest]
+        #if $[is_bin]
+$[TAB]$[INSTALL_PROG]
+        #else
+$[TAB]$[INSTALL]
+        #endif
+      #endif
+
+.PHONY : uninstall-$[target_dest]
+uninstall-$[target_dest] :
+$[TAB]@if test -f $[target_dest]; then rm $[target_dest]; fi;
+      #if $[ne $[target],$[static_target]]
+.PHONY : uninstall-$[static_target_dest]
+uninstall-$[static_target_dest] :
+$[TAB]@if test -f $[static_target_dest]; then rm $[static_target_dest]; fi;
+      #endif
+
+install-$[TARGET]-$[opt] : $[target_dest]
+install-static-$[TARGET]-$[opt] : $[static_target_dest]
+uninstall-$[TARGET]-$[opt] : uninstall-$[target_dest]
+uninstall-static-$[TARGET]-$[opt] : uninstall-$[static_target_dest]
+
+install-$[opt] : install-$[TARGET]-$[opt] install-static-$[TARGET]-$[opt]
+uninstall-$[opt] : uninstall-$[TARGET]-$[opt] uninstall-static-$[TARGET]-$[opt]
+
+    #end opt
+  #endif
+#end $[project_scopes]
+#end $[depot_makefile]
+
+// write a script to build whatever the current optimization level is
+#define depot_build_batch_file $[TOPDIR]/bin/makecurrent$[SCRIPT_EXT]
+#output $[depot_build_batch_file] notouch notest
+#format straight
+make $[script_variable_ref OPT_LEVEL]
+#end $[depot_build_batch_file]
+
+// If there is a file called LocalSetup.bld in the depot's top
+// directory, then invoke that.  It might contain some further
+// setup instructions.
+#sinclude $[TOPDIRPREFIX]LocalSetup.makefile.bld
+#sinclude $[TOPDIRPREFIX]LocalSetup.bld

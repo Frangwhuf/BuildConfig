@@ -1,0 +1,464 @@
+//
+// Global.bld
+//
+// This file is read in after all of the individual Sources.bld files
+// are read.  It defines a few global variables that are useful to all
+// different kinds of BUILD_TYPEs.
+//
+// We start off by defining a number of map variables.  These are
+// special variables that can be used to look up a particular named
+// scope according to a key (that is, according to the value of some
+// variable defined within the scope).
+//
+// A named scope is defined using the #begin name .. #end name
+// sequence.  In general, we use these sequences in the various
+// Sources.bld files to define the various targets to build.  Each
+// named scope carries around its set of variable declarations.  The
+// named scopes are associated with the dirname of the directory in
+// which the Sources.bld file was found.
+
+// These are the optimization types we currently know about:
+//     DEBUG - Full debugging code present, full symbols, slowest.
+//        QA - Between DEBUG and RELEASE.  This is still debuggable, but
+//             runs at a more reasonable speed.
+//   RELEASE - Fully optimized, most asserts removed, this is the version
+//             we would ship
+#define OPTIMIZATION_LEVELS debug qa release
+
+
+// First, make sure the build tree is present and ready.  This needs
+// $[OPTIMIZATION_LEVELS] to be set.
+#include $[BUILD_SCRIPTS]/TreeSetup.bld
+#include $[BUILD_SCRIPTS]/Tools.bld
+
+
+// The first map variable lets us look up a particular library target
+// by its target name.  The syntax here indicates that we are
+// declaring a map variable called "all_libs" whose key is the
+// variable $[TARGET] as defined in each instance of a named scope
+// called "lib_target", and so on in every Sources.bld file.
+// (The */ refers to all the Sources.bld files.  We
+// could also identify a particular file by it's directory name, or
+// omit the slash to refer to our own Sources.bld file.)
+//
+// After defining this map variable, we can look up other variables
+// that are defined for the corresponding target.  For instance,
+// $[all_libs $[SOURCES],gfx] will return the value of the SOURCES
+// variable as set for the gfx library (that is, the expression
+// $[SOURCES] is evaluated within the named scope whose key is
+// "gfx" -- whose variable $[TARGET] was defined to be "gfx").
+
+#map all_libs TARGET(*/lib_target */noinst_lib_target */test_lib_target */src_target)
+#map all_libs_basenames LIB_BASENAME(*/lib_target */noinst_lib_target */test_lib_target */src_target)
+
+
+// This map variable allows us to look up global variables that might
+// be defined in a particular Sources.bls, e.g. in the "toplevel" file.
+// TODO: decide if I still need/want this
+//#map dir_type DIR_TYPE(*/)
+
+
+// These allow us to determine whether a particular local library is a
+// static or dynamic library.
+// TODO: decide if I still need/want this
+//#map dynamic_libs TARGET(*/lib_target */noinst_lib_target */test_lib_target */src_target)
+
+
+// This lets us look up components of a particular lib.
+#map components TARGET(*/lib_target */noinst_lib_target */test_lib_target */src_target)
+
+
+// And this lets us look up source direcxtories by dirname.
+// TODO: decide if I still need/want this
+//#map dirnames DIRNAME(*/)
+
+
+// A map for looking up things in source-only projects
+// TODO: decide if I still need/want this
+#map all_src_libs TARGET(*/src_target)
+//#map all_src_lib_basenames TARGET(*/lib_target)
+
+
+// This map variable allows us to look up library scopes defined in a particular
+// path.  Like a combination of dirnames and all_libs, but with the path relative to $[TOPDIR].
+// TODO: decide if I still need/want this
+//#map all_lib_paths PATH(*/lib_target */noinst_lib_target */test_lib_target */src_target)
+
+
+// We define these two variables true here in the global scope; a
+// particular Sources.bld file can redefine these to be false to
+// prevent a particular directory or target from being built in
+// certain circumstances.
+// TODO: make sure this is being used
+#define BUILD_DIRECTORY 1
+#define BUILD_TARGET 1
+
+
+// This variable, when evaluated in the scope of a particular directory,
+// will indicate true (i.e. nonempty) when the directory is truely built,
+// or false (empty) when the direcxtory is not to be built.
+
+#defer build_directory $[BUILD_DIRECTORY]
+
+
+// It maps to a direct evaluation of the user-set variable,
+// BUILD_DIRECTORY, for historical reasons.  This also allows us to
+// reserve the right to extend this variable to test other conditions
+// as well, should the need arise.
+//
+// This variable, when evaluated in the scope of a particular target,
+// will indicate true when the target should be built, or false when
+// the target is not to be built.
+
+#defer build_target $[BUILD_TARGET]
+
+
+// This takes advantage of the above two variables to get the actual
+// list of local libraries we are to link with, eliminating those that
+// won't be built.
+
+#defer active_local_libs \
+  $[all_libs $[if $[and $[build_directory],$[build_target]],$[TARGET]],$[LOCAL_LIBS]]
+#defer active_component_libs \
+  $[all_libs $[if $[and $[build_directory],$[build_target]],$[TARGET]],$[COMPONENT_LIBS]]
+#defer active_libs $[active_local_libs] $[active_component_libs]
+
+
+// This variable, when evaluated within a target, will either be the
+// empty string (i the target is not to be built), or the target name
+// (if it is to be built).
+// TODO: decide if I still need/want this
+//#defer active_target $[if $[build_target],$[TARGET]]
+//#defer active_lib_basename $[if $[build_target],$[LIB_BASENAME]]
+
+
+// This subroutine will set up the sources variable to reflect the
+// complete set of sources for this target, and also set the
+// alt_cflags, alt_libs, etc. as appropriate according to how the
+// various USE_* flags are set for the current target.
+//
+// This variable returns the complete set of sources for the current
+// target.
+
+#defer get_sources \
+  $[filter-out $[PLATFORM_SOURCES],$[SOURCES]] \
+  $[get_combined_sources] \
+  $[if $[UNIX_PLATFORM],$[filter $[downcase $[PLATFORM]]/%,$[PLATFORM_SOURCES]]]
+
+
+// This variable returns the set of external packages used by this
+// target, and by all the components shared by this target.
+
+#defer use_packages $[sort $[USE_PACKAGES] $[components $[USE_PACKAGES],$[active_component_libs]]]
+
+
+// This function returns the appropriate include path for the target
+// based on the various external packages this particular target
+// claims to require.  This returns a space-separated set of directory
+// names only; the -I switch is not included here.
+
+#defun get_ipath
+  #define alt_ipath
+  #foreach package $[use_packages]
+    #set alt_ipath $[alt_ipath] $[$[package]_ipath]
+  #end package
+  $[alt_ipath] $[osfilename $[subst $$,$[opt],$[ALL_INC]]]
+#end get_ipath
+
+
+// This function return the appropriate library search path for the
+// target, based on the various external packages this particular
+// target claims to require.  This returns a space-separated set of
+// directory names only; the -L switch is not included here.
+
+#defun get_lpath
+  #define alt_lpath
+  #foreach package $[use_packages]
+    #set alt_lpath $[alt_lpath] $[${package]_lpath]
+  #end package
+  $[alt_lpath] $[osfilename $[subst $$,$[opt],$[ALL_LIB]]]
+#end get_lpath
+
+
+// This function returns the appropriate se of library names to link
+// with for the target, based on the various external packages this
+// particular target claims to require.  This returns a
+// space-separated set of library names only; the -l switch is not
+// included here.
+// TODO: decide if I still need/want this.  Probably do.
+//#defun get_libs
+//  #define alt_libs
+//  #if $[WINDOWS_PLATFORM]
+//    #set alt_libs $[alt_libs] $[WIN_SYS_LIBS] $[components $[WIN_SYS_LIBS],$[active_component_libs] $[transitive_link]]
+//  #elif $[OSX_PLATFORM]
+//    #set alt_libs $[alt_libs] $[OSX_SYS_LIBS] $[components $[OSX_SYS_LIBS],$[active_component_libs] $[transitive_link]]
+//  #else
+//    #set alt_libs $[alt_libs] $[UNIX_SYS_LIBS] $[components $[UNIX_SYS_LIBS],$[active_component_libs] $[transitive_link]]
+//  #endif
+//  #foreach package $[use_packages]
+//    #set alt_libs $[alt_libs] $[$[package]_libs]
+//  #end package
+//  $[alt_libs]
+//#end get_libs
+
+
+// This function determines the set of files a given source file
+// depends on.  It is based on the setting of the $[filename]_sources
+// variable to indicate the sources for composite files, etc.
+#defun get_depends source
+  #if $[$[source]_sources]
+    #if $[ne $[$[source]_sources],none]
+      $[$[source]_sources] $[dependencies $[$[source]_sources]]
+    #endif
+  #else
+    $[dependencies $[source]]
+  #endif
+#end get_depends
+
+
+// This function determines the set of libraries our various targets
+// depend on.  This is a complicated definition.  It is the union of
+// all of our targets' dependencies.
+// TODO: decide if I still need/want this.  Probably do.
+//#defun get_depend_libs
+//  #define depend_libs
+//  #forscopes lib_target noinst_lib_target test_lib_target bin_target noinst_bin_target test_bin_target doc_target src_target
+//    #foreach depend $[LOCAL_LIBS]
+//      #set depend_libs $[depend_libs] $[depend]
+//    #end depend
+//  #end lib_target noinst_lib_target test_lib_target bin_target noinst_bin_target test_bin_target doc_target src_target
+//  $[depend_libs]
+//#end get_depend_libs
+
+
+// retrieve the depot name for the given path (relative to toplevel)
+// used to detect when we're including from a "remote" depot, and
+// then return the depot name (../olive/foo/bar) will return olive
+// (foo/bar) will return $[DEPOT]
+// TODO: decide if I still need/want this.  Probably do.
+//#defun get_depot_path path
+//  #define ret_depot
+//  #if $[eq $[substr 1,3,$[path]], ../]
+//    // find the word between the first and second slash, call it the "depot"
+//    #set ret_depot $[word 2, $[split "/",$[path]]]
+//  #else
+//    #set ret_depot $[DEPOT]
+//  #endif
+//  $[ret_depot]
+//#end get_depot_path
+
+
+// TODO: this should probably be elsewhere
+//#define dllext
+
+
+// Output a standardized header for automatically generated files.
+#defsub emit_file_header type
+  #if $[eq $[type],makefile]
+#### Generated automatically by $[OCONFIG] $[OCONFIG_VERSION] from $[SOURCEFILE].
+################################ DO NOT EDIT ###################################
+
+  #elif $[eq $[type],c]
+/* Generated automatically by $[OCONFIG]  $[OCONFIG_VERSION] from $[SOURCEFILE]. */
+/* ############################# DO NOT EDIT ################################### */
+
+  #else
+    #error Unknown type ($[type]) passed to emit_file_header.
+  #endif // $[type]
+#end emit_file_header
+
+
+// Output a script line to set a variable
+#defsub emit_script_variable var,value
+  #if $[WINDOWS_PLATFORM]
+@SET $[var]=$[value]
+  #else
+export $[var]="$[value]"
+  #endif
+#end emit_script_variable
+
+
+#defsub emit_script_set_var var,value
+  #define start [
+  #define close ]
+##set $[var] $$[start]$[var]$[close] $[value]
+#end emit_script_set_var
+
+
+// Make a variable reference appropriate to the platform scripting
+#defun script_variable_ref var
+  #define ret
+  #if $[WINDOWS_PLATFORM]
+    #set ret %$[var]%
+  #else
+    #set ret $$[var]  // TODO: check that the $$ does the right thing
+  #endif
+  $[ret]
+#end script_variable_ref
+
+
+// Make a conditional appropriate to the platform scripting
+#defun script_conditional lhs,cond,rhs
+  #define ret
+  #if $[WINDOWS_PLATFORM]
+    #set ret "$[lhs]" $[cond] "$[rhs]"
+  #else
+    #set ret [[ "$[lhs]" $[cond] "$[rhs]" ]]
+  #endif
+  $[ret]
+#end script_conditional
+
+
+// Output a script line to prepend a path-like variable.  addon is assumed to be
+// space separated.
+#defsub emit_script_prepend_pathlike addon,var
+  #define join_char :
+  #if $[WINDOWS_PLATFORM]
+    #set join_char ;
+  #endif
+#call emit_script_variable $[var],$[join $[join_char],$[addon] $[script_variable_ref $[var]]]
+#end emit_script_prepend_pathlike
+
+
+// Output a script line to prepend the PATH.  addon is assumed to be
+// space separated.
+#defsub emit_script_prepend_path addon
+  #call emit_script_prepend_pathlike $[addon],PATH
+#end emit_script_prepend_path
+
+
+// Output a script line to prepend to the library path appropriate to this
+// system.  addon is assumed to be space separated.
+#defsub emit_script_prepend_lib_path addon
+  #if $[UNIX_PLATFORM]
+    #call emit_script_prepend_pathlike $[addon],LD_LIBRARY_PATH
+  #elif $[WINDOWS_PLATFORM]
+    #call emit_script_prepend_pathlike $[addon],PATH
+  #else
+    #error Don't know how to handle library paths on this platform.
+  #endif
+#end emit_script_prepend_lib_path
+
+
+// Output a script line to make an alias
+#defsub emit_script_alias key,value
+  #if $[UNIX_PLATFORM]
+alias $[key]='$[value]'
+  #elif $[WINDOWS_PLATFORM]
+DOSKEY $[key]=$[value]
+  #else
+    #error Don't know how to set a shell alias for this platform.
+  #endif
+#end emit_script_alias
+
+
+// Output a script line to execute a command.
+#defsub emit_script_command cmd
+  #if $[WINDOWS_PLATFORM]
+@$[cmd]
+  #else
+$[cmd]
+  #endif
+#end emit_script_command
+
+
+// Output script lines to start a conditional
+#defsub emit_script_conditional_start cond,label
+  #if $[WINDOWS_PLATFORM]
+@if $[cond] goto :$[label]true
+  @goto :$[label]false
+:$[label]true
+  #else
+if $[cond]; then
+  #endif
+#end emit_script_conditional_start
+
+
+// Output script lines to start the else part of a conditional
+#defsub emit_script_conditional_else label
+  #if $[WINDOWS_PLATFORM]
+  @goto :$[label]end
+:$[label]false
+  #else
+else
+  #endif
+#end emit_script_conditional_else
+
+
+// Output script lines to end a conditional
+#defsub emit_script_conditional_end label
+  #if $[WINDOWS_PLATFORM]
+:$[label]end
+  #else
+fi
+  #endif
+#end emit_script_conditional_end
+
+
+// Given a starting directory, and a list of targets,
+// return a list of relative paths from the starting
+// directory to the targets.
+#defun relativize from,to
+  #define result
+  #foreach file $[to]
+    #set result $[result] $[relpath $[from],$[file]]
+  #end file
+  $[result]
+#end relativize
+
+
+// TODO: do I still need/want this?  probably not.
+//#if $[WINDOWS_PLATFORM]
+//  #defun decygwin frompat,topat,path
+//    #foreach file $[path]
+//      #if $[isfullpath $[file]]
+//        $[patsubstw $[frompat],$[topat],$[cygpath_w $[file]]]
+//      #else
+//        $[patsubstw $[frompat],$[topat],$[osfilename $[file]]]
+//      #endif
+//    #end file
+//  #end decygwin
+//#endif // $[WINDOWS_PLATFORM]
+
+
+// Include the global definitions for this particular BUILD_TYPE, if
+// the file is there.
+#sinclude $[GLOBAL_TYPE_FILE]
+
+
+// Ok.  Now we know what is going on with winking, we should also be aware of any depot that we depend on.
+// So, let's compute include and lib paths from that other depot, as well as write out a cache of these for
+// other depots to use.
+#define ALL_INC
+#define ALL_LIB
+// Read a cache from another depot
+#if $[ne $[IMPORT_DEPOT],]
+  #foreach dep $[IMPORT_DEPOT]
+    #define tmp_all_inc $[ALL_INC]
+    #define tmp_all_lib $[ALL_LIB]
+    #define updep $[upcase $[dep]]
+    #set tmp_all_inc $[tmp_all_inc] $[standardize $[IMPORT_TOP]/$[dep]/inc]
+    #set tmp_all_lib $[tmp_all_lib] $[standardize $[IMPORT_TOP]/$[dep]/lib]
+    #if $[WINDOWS_PLATFORM]
+      #set tmp_all_lib $[tmp_all_lib] $[standardize $[IMPORT_TOP]/$[dep]/bin]
+    #endif  // WINDOWS_PLATFORM
+    #define $[updep]_PATHCACHE $[standardize $[IMPORT_TOP]/$[dep]/PathCache.bld]
+    #sinclude $[$[updep]_PATHCACHE]
+    #set ALL_INC $[tmp_all_inc] $[ALL_INC]
+    #set ALL_LIB $[tmp_all_lib] $[ALL_LIB]
+  #end dep
+#endif
+// Add stuff from this depot
+#define NEW_ALL_INC $[ALL_INC] $[TOPDIR]/inc
+#define NEW_ALL_LIB $[ALL_LIB] $[TOPDIR]/lib
+#if $[WINDOWS_PLATFORM]
+  #set NEW_ALL_LIB $[NEW_ALL_LIB] $[TOPDIR]/bin
+#endif // WINDOWS_PLATFORM
+#set NEW_ALL_INC $[unique $[NEW_ALL_INC]]
+#set NEW_ALL_LIB $[unique $[NEW_ALL_LIB]]
+// Write out our own path cache
+#define $[upcase $[DEPOT]]_PATHCACHE $[TOPDIR]/PathCache.bld
+#output $[$[upcase $[DEPOT]]_PATHCACHE] notest notouch
+##define ALL_INC $[NEW_ALL_INC]
+##define ALL_LIB $[NEW_ALL_LIB]
+#end $[$[upcase $[DEPOT]]_PATHCACHE]

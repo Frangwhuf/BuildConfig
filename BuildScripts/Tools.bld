@@ -1,0 +1,146 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Generic support for file types.  The idea here is that the
+// "emit_project_files" subroutine (in Global.msvc.bld) iterates through each
+// source file and calls "filetype", which returns something like "cpp" or
+// "daspc".  Then, it calls the appropriate *_command function below to find
+// out how to compile the thing.  If the return from that is a shell command,
+// then we use that command as a custom tool and call the *_outputs function to
+// figure out what that custom tool will generate.  The *_command function may
+// also return one of these magic values:
+//
+//     use_devenv_default_tool --- assume devenv knows what to do, i.e., put a
+//       simple <File></File> line in the project file.  This works great for
+//       common filetypes like ".c" and ".cpp".
+//
+//     do_not_compile --- this file should not be compiled.  ".obj" files are
+//       in this category.
+//
+// The clever part is that the output of "*_outputs" are fed back through the
+// loop!, so this process supports multi-step compilation (e.g., foo.das ->
+// foo.cpp -> foo.obj).
+//
+//////////////////////////////////////////////////////////////////////
+
+// TODO: figure out what, if anything, I want to do with this.
+
+//#defun filetype file
+//  #if $[filter %.cpp,$[file]]
+//    #if $[filter $[CXXTEST_FILES],$[file]]
+//      cxxtest
+//    #else
+//      cpp
+//    #endif
+//  #elif $[filter %.s,$[file]]
+//    c 
+//  #elif $[filter %.nas,$[file]]
+//    nasm
+//  #elif $[filter %.das,$[file]]
+//    daspc
+//  #elif $[filter %.obj,$[file]]
+//    obj
+//  #elif $[filter %.h,$[file]]
+//    h
+//  #elif $[filter %.c,$[file]]
+//    c
+//  #elif $[filter %.bld,$[file]]
+//    bld
+//  #elif $[filter %.pl %.pm,$[file]]
+//    perl
+//  #else
+//    misc
+//  #endif
+//#end filetype
+
+//////////////////////////////////////////////////////////////////////
+
+//#defun nasm_command file
+//  $[NASM] -f win32 -o $[nasm_outputs $[file]] $[osfilename $[TOPDIR]/$[PATH]/$[file]]
+//#end nasm_command
+
+//#defun nasm_outputs file
+//  $(IntDir)\$[patsubst %.nas,%.obj,$[notdir $[file]]]
+//#end nasm_outputs
+
+//////////////////////////////////////////////////////////////////////
+
+//#defun cxxtest_command file
+//  $[CXXTEST] --output=$[cxxtest_outputs $[file]] $[osfilename $[TOPDIR]/$[PATH]/$[file]]
+//#end cxxtest_command
+
+//#defun cxxtest_outputs file
+//  $[osfilename $[ODIR]/$[PATH]/$[patsubst %.h %.cpp,%_cxxtest.cpp,$[file]]]
+//#end cxxtest_outputs
+
+//////////////////////////////////////////////////////////////////////
+
+//#defun daspc_command file
+//  perl -I$[osfilename $[DASPC_DIR]] $[patsubst %,-I%,$[osfilename $[DASPC_INCS]]]
+//       -MDaspc $[osfilename $[TOPDIR]/$[PATH]/$[file]] -c -o
+//       // We turn all "\" into "/" below because daspc does not like "\" in filenames.
+//       $[subst \,/,$[osfilename $[patsubst %.das,$[ODIR]/$[PATH]/%,$[file]]]]
+//#end daspc_command
+
+//#defun daspc_outputs file
+//  #define out $[osfilename $[patsubst %,$[ODIR]/$[PATH]/%, $[patsubst %.das,%.h,$[file]] $[patsubst %.das,%.cpp,$[file]]]]
+//  #if $[WINDOWS_PLATFORM]
+//    #set out $[join ;,$[out]]
+//  #endif
+//  $[out]
+//#end daspc_outputs
+
+//////////////////////////////////////////////////////////////////////
+
+//#defun tolua_command file
+//  #if $[eq $[TOLUA_LIB_INDEX],]
+//    #defer TOLUA_LIB_INDEX 2
+//  #endif
+//
+//  $[TOLUAFRONTEND] -Q 
+//    --src=$[osfilename $[TOPDIR]/$[PATH]/$[RELTOLUASRCPATH]]
+//    --bld=$[osfilename $[ODIR]] 
+//    --lib=$[word $[TOLUA_LIB_INDEX],$[split /,$[file]]]
+//    --file=$[osfilename $[TOPDIR]/$[PATH]/$[file]]
+//    --targetdir=$[osfilename $[ODIR]/$[PATH]/$[dir $[file]]]
+//#end tolua_command
+//#defun tolua_outputs file
+//  $[osfilename $[ODIR]/$[PATH]/$[patsubst %.h,%.tolua.cpp,$[file]]]
+//#end tolua_outputs
+
+//////////////////////////////////////////////////////////////////////
+
+// perhaps put the generated .py somewhere else?
+//#defun swig_command file
+//  swig -c++ -python
+//  #foreach i $[complete_ipath]
+//   -I$[osfilename $[i]]
+//  #end i
+//  -outdir $[osfilename $[ODIR]/$[PATH]/$[dir $[file]]]
+//  -o $[osfilename $[ODIR]/$[PATH]/$[patsubst %.i,%_wrap.cpp,$[file]]]
+//  $[osfilename $[TOPDIR]/$[PATH]/$[file]]
+//#end swig_command
+//#defun swig_outputs file
+//  $[osfilename $[ODIR]/$[PATH]/$[patsubst %.i,%_wrap.cpp,$[file]]]
+//#end swig_outputs
+
+#defun all_custom_outputs
+  #define total
+  #foreach file $[DAS_FILES]
+    #set total $[total] $[daspc_outputs $[file]]
+  #end file
+  #foreach file $[CXXTEST_FILES]
+    #set total $[total] $[cxxtest_outputs $[file]]
+  #end file
+  #if $[WINDOWS_PLATFORM]
+    #foreach file $[NASM_FILES]
+      #set total $[total] $[nasm_outputs $[file]]
+    #end file
+  #endif
+  #foreach file $[TOLUA_FILES]
+    #set total $[total] $[tolua_outputs $[file]]
+  #end file
+  #foreach file $[SWIG_FILES]
+    #set total $[total] $[swig_outputs $[file]]
+  #end file
+  $[total]
+#end all_custom_outputs

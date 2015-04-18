@@ -1,0 +1,261 @@
+//
+// Depends.bld
+//
+// This file is loaded and run after each Sources.bld is read.  It
+// defines the inter-directory dependencies, which is usefull for
+// determining build order.
+
+#define REQUIRED_OCONFIG_VERSION 2.1
+
+#if $[< $[OCONFIG_VERSION],$[REQUIRED_OCONFIG_VERSION]]
+  #error You need at least oconfig version $[REQUIRED_OCONFIG_VERSION] for build dependency caching.
+#endif
+
+//////////////////////
+// auto-discovery code
+//////////////////////
+
+// make the defers concrete in this scope
+#define autodiscover_versioned_files $[autodiscover_versioned_files]
+#define autodiscover_sources $[autodiscover_sources]
+#define autodiscover_platform_sources $[autodiscover_platform_sources]
+#define autodiscover_perl_sources $[autodiscover_perl_sources]
+#define autodiscover_build_files $[autodiscover_build_files]
+#define autodiscover_idl_files $[autodiscover_idl_files]
+#define autodiscover_misc_files $[autodiscover_misc_files]
+
+#define sourceless_scopes
+#define scope_sources
+#define buildsysless_scopes
+#define scope_buildsys
+#define perlless_scopes
+#define scope_perls
+#define swigless_scopes
+#define scope_swigs
+#define platless_scopes
+#define scope_plats
+#define orphans
+#define prefered_child
+#forscopes *
+  #if $[not $[defined SOURCES]]
+    #set sourceless_scopes $[sourceless_scopes] $[THISSCOPENAME]
+  #else
+    #set scope_sources $[scope_sources] $[SOURCES]
+  #endif
+  #if $[not $[defined BUILD_SYSTEM_FILES]]
+    #set buildsysless_scopes $[buildsysless_scopes] $[THISSCOPENAME]
+  #else
+    #set scope_buildsys $[scope_buildsys] $[BUILD_SYSTEM_FILES]
+  #endif
+  #if $[not $[defined PERL_FILES]]
+    #set perlless_scopes $[perlless_scopes] $[THISSCOPENAME]
+  #else
+    #set scope_perls $[scope_perls] $[PERL_FILES]
+  #endif
+  #if $[not $[defined SWIG_FILES]]
+    #set swigless_scopes $[swigless_scopes] $[THISSCOPENAME]
+  #else
+    #set scope_swigs $[scope_swigs] $[SWIG_FILES]
+  #endif
+  #if $[not $[defined PLATFORM_SOURCES]]
+    #set platless_scopes $[platless_scopes] $[THISSCOPENAME]
+  #else
+    #set scope_plats $[scope_plats] $[PLATFORM_SOURCES]
+  #endif
+  #if $[eq $[TARGET],$[DIRNAME]]
+    #set prefered_child $[THISSCOPENAME]
+  #endif
+#end *
+#if $[sourceless_scopes]
+  #if $[> $[words $[sourceless_scopes]],1]
+    #error More then one scope in $[THISSCOPENAME] does not specify SOURCES. ($[sourceless_scopes])
+  #endif // num scopes $[sourceless_scopes] > 1
+  #forscopes $[sourceless_scopes]
+    #if $[not $[defined SOURCES]]
+      #define SOURCES $[filter-out $[scope_sources],$[autodiscover_sources]]
+    #endif // ! defined SOURCES
+  #end $[sourceless_scopes]
+#else
+  #set orphans $[orphans] $[filter-out $[scope_sources],$[autodiscover_sources]]
+#endif // $[sourceless_scopes]
+#if $[buildsysless_scopes]
+  #define set_build_sys_files
+  #if $[prefered_child]
+    #forscopes $[prefered_child]
+      #if $[and $[not $[defined BUILD_SYSTEM_FILES]],$[not $[set_build_sys_files]]]
+        #define BUILD_SYSTEM_FILES $[filter-out $[scope_buildsys],$[autodiscover_build_files]]
+        #set set_build_sys_files 1
+        #push 1 set_build_sys_files
+      #endif // ! defined BUILD_SYSTEM_FILES && ! set_build_sys_files
+    #end $[prefered_child]
+  #endif // prefered_child
+  #if $[not $[set_build_sys_files]]
+    #forscopes $[buildsysless_scopes]
+      #if $[and $[not $[defined BUILD_SYSTEM_FILES]],$[not $[set_build_sys_files]]]
+        #define BUILD_SYSTEM_FILES $[filter-out $[scope_buildsys],$[autodiscover_build_files]]
+        #set set_build_sys_files 1
+        #push 1 set_build_sys_files
+      #endif // ! defined BUILD_SYSTEM_FILES && ! set_build_sys_files
+    #end $[buildsysless_scopes]
+  #endif // ! set_build_sys_files
+#else
+  #set orphans $[orphans] $[filter-out $[scope_buildsys],$[autodiscover_build_files]]
+#endif // $[buildsysless_scopes]
+#if $[perlless_scopes]
+  #define set_perl_files
+  #if $[prefered_child]
+    #forscopes $[prefered_child]
+      #if $[and $[not $[defined PERL_FILES]],$[not $[set_perl_files]]]
+        #define PERL_FILES $[filter-out $[scope_perls],$[autodiscover_perl_sources]]
+        #set set_perl_files 1
+        #push 1 set_perl_files
+      #endif // ! defined PERL_FILES && ! set_perl_files
+    #end $[prefered_child]
+  #endif // prefered_child
+  #if $[not $[set_perl_files]]
+    #forscopes $[perlless_scopes]
+      #if $[and $[not $[defined PERL_FILES]],$[not $[set_perl_files]]]
+        #define PERL_FILES $[filter-out $[scope_perls],$[autodiscover_perl_sources]]
+        #set set_perl_files 1
+        #push 1 set_perl_files
+      #endif // ! defined PERL_FILES && ! set_perl_files
+    #end $[perlless_scopes]
+  #endif // ! set_perl_files
+#else
+  #set orphans $[orphans] $[filter-out $[scope_perls],$[autodiscover_perl_sources]]
+#endif // $[perlless_scopes]
+#if $[swigless_scopes]
+  #define set_swig_files
+  #if $[prefered_child]
+    #forscopes $[prefered_child]
+      #if $[and $[not $[defined SWIG_FILES]],$[not $[set_swig_files]]]
+        #define SWIG_FILES $[filter-out $[scope_swigs],$[autodiscover_swig_files]]
+        #set set_swig_files 1
+        #push 1 set_swig_files
+      #endif // ! defined SWIG_FILES && ! set_swig_files
+    #end $[prefered_child]
+  #endif // prefered_child
+  #if $[not $[set_swig_files]]
+    #forscopes $[swigless_scopes]
+      #if $[and $[not $[defined SWIG_FILES]],$[not $[set_swig_files]]]
+        #define SWIG_FILES $[filter-out $[scope_swigs],$[autodiscover_swig_files]]
+        #set set_swig_files 1
+        #push 1 set_swig_files
+      #endif // ! defined SWIG_FILES && ! set_swig_files
+    #end $[swigless_scopes]
+  #endif // ! set_swig_files
+#else
+  #set orphans $[orphans] $[filter-out $[scope_swigs],$[autodiscover_swig_files]]
+#endif // $[swigless_scopes]
+#if $[platless_scopes]
+  #define set_plat_files
+  #if $[prefered_child]
+    #forscopes $[prefered_child]
+      #if $[and $[not $[defined PLATFORM_SOURCES]],$[not $[set_plat_files]]]
+        #define PLATFORM_SOURCES $[filter-out $[scope_plats],$[autodiscover_platform_sources]]
+        #set set_plat_files 1
+        #push 1 set_plat_files
+      #endif // ! defined PLATFORM_SOURCES && ! set_plat_files
+    #end $[prefered_child]
+  #endif // prefered_child
+  #if $[not $[set_plat_files]]
+    #forscopes $[platless_scopes]
+      #if $[and $[not $[defined PLATFORM_SOURCES]],$[not $[set_plat_files]]]
+        #define PLATFORM_SOURCES $[filter-out $[scope_plats],$[autodiscover_platform_sources]]
+        #set set_plat_files 1
+        #push 1 set_plat_files
+      #endif // ! defined PLATFORM_SOURCES && ! set_plat_files
+    #end $[platless_scopes]
+  #endif // ! set_plat_files
+#else
+  #set orphans $[orphans] $[filter-out $[scope_plats],$[autodiscover_platform_sources]]
+#endif // $[platless_scopes]
+#forscopes $[firstword $[THISSCOPENAME(*)]]
+  #define ORPHANED_FILES $[orphans]
+#end $[firstword $[THISSCOPENAME(*)]]
+
+/////////////////////////////
+// work out real dependencies
+/////////////////////////////
+
+#if $[eq $[DIR_TYPE],src]
+  // These variables define the set of things we need to install.
+  // We want this work done before the Template.*.bld files are read.
+  #defer install_lib $[active_target(lib_target)]
+  #defer install_bin $[active_target(bin_target)]
+  #defer install_scripts $[sort $[INSTALL_SCRIPTS(lib_target bin_target src_target)] $[INSTALL_SCRIPTS]]
+  #defer install_headers $[sort $[INSTALL_HEADERS(lib_target bin_target src_target)] $[INSTALL_HEADERS]]
+  #defer install_docs $[active_target(doc_target)]
+  // Now, potentially compute dependencies.
+  #if $[eq $[DEPEND_DIRS],]
+    // DEPENDABLE_HEADERS is supposed to be the primary purpose of this
+    // file: here we generate the list of source files that might be
+    // included in some other source file, and hence is relevant to the
+    // automatically-generated dependency chain.
+    //
+    // We generate this variable by walking through all of the targets
+    // and building it up.
+    #define DEPENDABLE_HEADERS
+    
+    // We will also need to sort out the types of files we will actually
+    // compile within each directory, as well as the lists of files that
+    // go into each composite.
+    //
+    // We define $[c_sources], $[cxx_sources] within each target, which
+    // lists original files as well as synthetic composite files.  There's
+    // also $[compile_sources], which is the union of all the others: any
+    // source files that are actually compiled and result in a generated
+    // .c (or .obj) file.
+    //
+    // Finally, we build up $[composite_list] out here to list all of
+    // the composite files generated for all targets.
+    //
+    // This is done at this point, within Depends.bld, so that the
+    // various Template.*.bld files will be able to reliably access
+    // $[compile_sources] from the different directories.
+    #define composite_list
+    
+    #forscopes lib_target noinst_lib_target test_lib_target bin_target noinst_bin_target test_bin_target doc_target src_target
+      // We can optimize quite a bit by evaluating now several of the key
+      // deferred variables defined in Globals.bld.  This way they won't need
+      // to get repeatedly reevaluated as each directory examines each
+      // other.
+      #define build_directory $[build_directory]
+      #define build_target $[build_target]
+      #define active_local_libs $[active_local_libs]
+      #define active_component_libs $[active_component_libs]
+      #define active_libs $[active_libs]
+      #define get_sources $[get_sources]
+      // Report a warning for nonexisting dependencies.
+      #define nonexisting $[unmapped all_libs,$[LOCAL_LIBS]]
+      #if $[ne $[nonexisting],]
+        #print Warning: Lib(s} $[nonexisting], referenced in $[DIRNAME]/$[TARGET], not found.  all_libs knows: $[formap all_libs,$[TARGET]].
+        #print Warning: Lib(s} $[nonexisting], referenced in $[DIRNAME]/$[TARGET], not found.  all_libs basenames known: $[formap all_libs,$[LIB_BASENAME] in $[THISSCOPENAME]].
+      #endif
+      #set DEPENDABLE_HEADERS $[DEPENDABLE_HEADERS] $[filter %.h %.I %.T %_src.cxx,$[get_sources]]
+      // Now compute the source files.
+      #define c_sources $[filter %.c %.s,$[get_sources]]
+      #define cxx_sources $[filter-out %_src.cxx,$[filter %.cxx %.cpp,$[get_sources]]]
+      #define header_sources $[filter %.h %.I %.T,$[get_sources]]
+      // Define what the object files are.
+      #foreach file $[c_sources] $[cxx_sources]
+        #define $[file]_obj $[patsubst %.c %.C %.cxx %.CXX %.s %.cpp,$[ODIR]/$[PATH]/$[obj_prefix]%$[OBJ],$[notdir $[file]]]
+        #push 1 $[file]_obj
+      #end file
+      #define compile_sources $[c_sources] $[cxx_sources]
+    #end lib_target noinst_lib_target test_lib_target bin_target noinst_bin_target test_bin_target doc_target src_target
+    // Allow the user to define additional EXTRA_DEPENDS targets in each
+    // Sources.bld file.
+    #define DEPEND_DIRS \
+      $[sort $[EXTRA_DEPENDS] $[filter-out $[PATH],$[all_libs $[PATH],$[get_depend_libs]]]]
+    #set DEPENDABLE_HEADERS $[sort $[DEPENDABLE_HEADERS] $[EXTRA_DEPENDABLE_HEADERS]]
+
+    // these make it possible for a source tree to know
+    // about dependable headers that live inside a completely
+    // different source tree altogether
+    #define EXTERNAL_DEPENDS $[EXTERNAL_DEPENDS] 
+    #foreach depdir $[EXTRA_DEPENDABLE_DIRS]
+      #set EXTERNAL_DEPENDS $[EXTERNAL_DEPENDS] $[relpath $[TOPDIR]/$[PATH],$[standardize $[depdir]]]
+    #end depdir
+  #endif
+#endif

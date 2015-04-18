@@ -1,0 +1,143 @@
+//
+// compilerSettings.makefile.bld
+//
+// This file contains settings specific to compilers on Linux.  If
+// we need something like this for other BUILD_TYPEs, this should be
+// refactored.
+
+#define CFLAGS_GEN -ggdb -m$(BIT_SIZE) -march=native -Wall -MMD -Wno-sign-compare -Wno-unused -fpic -fmerge-constants -flto
+// think about -Wno-invalid-offsetof
+#define C++FLAGS_GEN $[CFLAGS_GEN] -ffor-scope -fno-enforce-eh-specs -fno-threadsafe-statics -Wreorder -std=c++0x -Wno-deprecated -Wno-delete-non-virtual -Wno-delete-non-virtual-dtor
+
+#define CC gcc
+#define CXX g++
+
+// How to compile a C or C++ file into a .o file.  $[target] is the
+// name of the .o file, $[source] is the name of the source file,
+// $[ipath] is a space-separated list of directories to search for
+// inluce files, and $[flags] is a list of additional flags to pass
+// to the compiler.
+#defer COMPILE_C $[CC] -c -o $[target] $[ipath:%=-I%] $[flags] $[source]
+#defer COMPILE_C++ $[CXX] -c -o $[target] $[ipath:%=-I%] $[flags] $[source]
+
+// Suffixes to apply to different build level targets
+#define OPT_SUFFIX_DEBUG D
+#define OPT_SUFFIX_QA Q
+#define OPT_SUFFIX_RELEASE
+
+// What flags should be passed to both C and C++ compilers to enable
+// compiler optimizations?  This will be supplied when compiling non-Debug.
+#defer OPTFLAGS -Ofast -fno-strict-aliasing -finline-functions
+
+// What define variables should be passed to the compilers for each
+// value of OPTIMIZE?  Do not include -D here; that will be supplied
+// automatically.
+#defer CDEFINES_COMMON UNIX_PLATFORM $[if $[ne $[BUILD_TESTS],],TOOLS_UNIT_TEST]
+#defer CDEFINES_OPT_DEBUG $[CDEFINES_COMMON] _DEBUG $[EXTRA_CDEFS]
+#defer CDEFINES_OPT_QA $[CDEFINES_COMMON] NDEBUG $[EXTRA_CDEFS]
+#defer CDEFINES_OPT_RELEASE $[CDEFINES_COMMON] NDEBUG RELEASE $[EXTRA_CDEFS]
+
+// What additional flags should be passed for each value of OPTIMIZE
+// (above)?  We separate out the compiler optimization flags, above,
+// so we can compile certain files that give optimizers trouble (like
+// the output of lex and yacc) without them, but with all the other
+// relevant flags.
+#defer CFLAGS_OPT_DEBUG $[CFLAGS_GEN] $[CDEFINES_OPT_DEBUG:%=-D%] -g
+#defer CFLAGS_OPT_QA $[CFLAGS_GEN] $[CDEFINES_OPT_QA:%=-D%] -g $[OPTFLAGS]
+#defer CFLAGS_OPT_RELEASE $[CFLAGS_GEN] $[CDEFINES_OPT_RELEASE:%=-D%] $[OPTFLAGS]
+#defer C++FLAGS_OPT_DEBUG $[C++FLAGS_GEN] $[CDEFINES_OPT_DEBUG:%=-D%] -g
+#defer C++FLAGS_OPT_QA $[C++FLAGS_GEN] $[CDEFINES_OPT_QA:%=-D%] -g $[OPTFLAGS]
+#defer C++FLAGS_OPT_RELEASE $[C++FLAGS_GEN] $[CDEFINES_OPT_RELEASE:%=-D%] $[OPTFLAGS]
+
+// What additional flags should be passed to the linker?
+#defer LDFLAGS -ggdb -m$(BIT_SIZE) -march=native -flto -Wall -fPIC
+#defer LD++FLAGS -lrt -ldl -lstdc++
+#defer LDFLAGS_OPT_DEBUG 
+#defer LDFLAGS_OPT_QA 
+#defer LDFLAGS_OPT_RELEASE 
+
+// How to generate a C or C++ executable from a collection of .o files.
+// $[target] is the name of the binary to generate, and $[sources] is the
+// list of .0 files.  $[libs] is a space-separated list of dependent
+// libraries, and $[lpath] is a space-separated list of directories in
+// which those libraries can be found.
+#defer LINK_BIN_C $[cc_ld] -o $[target] $[sources] $[lpath:%=-L%] $[linked_libs:%=-l%] $[flags] $[linked_sharedlibs:%=-l%]
+#defer LINK_BIN_C++ $[cxx_ld] -o $[target] $[sources] $[lpath:%=-L%] $[linked_libs:%=-l%] $[flags] $[linked_sharedlibs:%=-l%]
+
+#defer STATIC_LINK_BIN_C $[cc_ld] -o $[target] $[sources] -Wl,-static $[lpath:%=-L%] $[linked_libs:%=-l%] -Wl,-no-whole-archive -Wl,-call_shared $[flags] $[linked_sharedlibs:%=-l%]
+#defer STATIC_LINK_BIN_C++ $[cxx_ld] -o $[target] $[sources] -Wl,-static -Wl,-whole-archive $[lpath:%=-L%] $[linked_libs:%=-l%] -Wl,-Bdynamic $[special_linked_libs:%=-l%] -Wl,-Bstatic -Wl,-no-whole-archive -Wl,-call_shared $[flags] $[linked_sharedlibs:%=-l%]
+
+// How to generate a static C or C++ library.  $[target] is the name of
+// the library to generate, and $[sources] is the list of .o files that
+// will go into the library.
+#defer STATIC_LIB_C ar cru $[target] $[sources]
+#defer STATIC_LIB_C++ ar cru $[target] $[sources]
+
+// How to run ranlib, if necessary, after generating a static library.
+// $[target] is the name of the library.  Set this to the empty string
+// if ranlib is not necessary on this platform.
+#defer RANLIB ranlib $[target]
+
+// Control if things are 'stripped' of symbols at various build levels
+#defer STRIP_DEBUG
+#defer STRIP_QA
+#defer STRIP_RELEASE strip
+
+// How to generate a shared C or C++ library.  $[source] and $[target]
+// as above, and $[libs] is a space-separated list of dependent
+// libraries, and $[lpath] is a space-separated list of directories in
+// which those libraries can be found.
+#defer SHARED_LIB_C $[cc_ld] -shared -o $[target] $[sources] $[lpath:%=-L%] $[linked_libs:%=-l%] $[flags]
+#defer SHARED_LIB_C++ $[cxx_ld] -shared -o $[target] $[sources] $[lpath:%=-L%] $[linked_libs:%=-l%] $[flags]
+
+// How to install a data file or executable file.  $[local] is the
+// local name of the file to install, and $[dest] is the name of the
+// directory to put it in.
+//
+// On Unix systems, we strongly prefer using the install program to
+// install files.  This has nice features like automatically setting
+// the permissions bits, and also is usually clever enough to install
+// a running program without crashing the running instance.  However,
+// it doesn't understand installing a program from a subdirectory,
+// so we have to cd into the source directory first.
+#defer INSTALL $[if $[ne $[dir $[local]], ./],cd $[dir $[local]] &&] install -m 644 $[notdir $[local]] $[dest]
+#defer INSTALL_PROG $[if $[ne $[dir $[local]], ./],cd $[dir $[local]] &&] install -m 755 $[notdir $[local]] $[dest]
+#defer INSTALL_DIR install -d -m 755 $[dir $[dest]]
+
+#if $[ENABLE_PROFILING]
+  // note according to docs, this should force /PDB:none /DEBUGTYPE:cv, 
+  // so no pdb file is generated for debug??  (doesnt seem to be true)
+  #define PROFILE_FLAG /PROFILE
+#else
+  #define PROFILE_FLAG
+#endif
+
+#if $[or $[ne $[FORCE_INLINING],],$[eq $[OPTIMIZE],QA],$[eq $[OPTIMIZE],Release]]
+  #define EXTRA_CDEFS FORCE_INLINING $[EXTRA_CDEFS]
+#endif
+
+// This variable returns the set of external packages used by this
+// target, and by all the components shared by this target.
+#defer use_packages $[sort $[USE_PACKAGES] $[components $[USE_PACKAGES],$[active_component_libs]]]
+
+// This function returns the appropriate cflags for the target, based
+// on the various external packages this particular target claims to
+// require.
+#defun get_cflags
+  #define alt_cflags
+  #foreach package $[use_packages]
+    #set alt_cflags $[alt_cflags] $[$[package]_cflags]
+  #end package
+  $[alt_cflags]
+#end get_cflags
+
+// This function returns the appropriate link flags for the target,
+// based on the various external packages this particular target
+// claims to require.
+#defun get_lflags
+  #define alt_lflags
+  #foreach package $[use_packages]
+    #set alt_lflags $[alt_lflags] $[$[package]_lflags]
+  #end package
+  $[alt_lflags]
+#end get_lflags

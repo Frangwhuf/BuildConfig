@@ -1,0 +1,309 @@
+//
+// Template.src.msvc.bld
+//
+// This file defines the set of output files that will be generated to
+// support a Microsoft Visual C++ .NET solution / project build.  It
+// generates .dll files, compiles source files to .obj files, and does
+// other Windows-specific things.
+//
+// Before this file is processed, the following files are read and
+// processed (in order):
+//
+// The Depot.bld file in the root of the current source hierarchy
+//   (e.g. C:\o\trunk\olive\Depot.bld)
+// <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
+// <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)
+// The user's OCONFIG_CONFIG file. (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/System.bld (included from <TOOL>/Depot.bld)
+// All of the Sources.bld files in the current source hierarchy (read by oconfig)
+// <TOOL>/oconfig/bldtempl/Global.bld (name defined in System.bld (GLOBAL_FILE), read by oconfig)
+// <TOOL>/oconfig/bldtempl/TreeSetup.bld
+// <TOOL>/oconfig/bldtempl/Global.msvc.bld (name defined in System.bld (GLOBAL_TYPE_FILE), included from Global.bld)
+// <TOOL>/oconfig/bldtempl/compilerSettings.bld (included from Global.msvc.bld)
+// <TOOL>/oconfig/bldtempl/Depends.bld  (once for each Sources.bld file, name defined in System.bld (DEPENDS_FILE),
+//                                      read by oconfig)
+// <TOOL>/oconfig/bldtempl/Template.bld
+// <TOOL>/oconfig/bldtempl/Template.msvc.bld
+// <TOOL>/oconfig/bldtempl/Template.src.bld
+// <TOOL>/oconfig/bldtempl/Template.src.msvc.bld ((this file) once for each Sources.bld file,
+//                                               name defined in System.bld (TEMPLATE_FILE), read by oconfig)
+
+#defer bin_dir $[standardize $[ODIR]/$[PATH]/$[opt]]
+
+// For a source directory, build a single project with
+// rules to build each target
+#if $[build_directory]
+  // This is the real set of lib_targets we'll be building.
+  #define real_lib_targets
+  #define deferred_objs
+  #forscopes lib_target
+    #set real_lib_targets $[real_lib_targets] $[TARGET]
+  #end lib_target
+  #defer lib_projects \
+    $[active_target(lib_target noinst_lib_target test_lib_target)] \
+    $[real_lib_targets]
+  #defer bin_projects \
+    $[active_target(bin_target noinst_bin_target)]
+  #defer test_bin_projects \
+    $[active_target(test_bin_target)]
+  #defer noinst_bin_projects \
+    $[active_target(noinst_bin_target)]
+  // We need to know the various targets we'll be building.
+  // $[lib_targets] will be the list of dynamic libraries,
+  // and $[bin_targets] the list of binaries.  $[test_bin_targets]
+  // is the list of binaries that are to be built only when
+  // specifically asked for.
+  #define lib_targets $[patsubst %,%$[dllext].$[dlllib],$[lib_projects]]
+  #define bin_targets $[bin_projects:%=%.exe] $[active_target(sed_bin_target)]
+  #define test_bin_targets $[test_bin_projects:%=%.exe]
+  #define noinst_bin_targets $[noinst_bin_projects:%=%.exe]
+  #define all_targets $[unique $[lib_targets] $[noinst_lib_target] $[test_lib_target] $[bin_targets] $[test_bin_targets] $[noinst_bin_targets]]
+  // $[so_sources] is the set of sources that belong on in a shared object,
+  // and $[st_sources] is the set of sources that belong in a static object,
+  // like a static library or an executable.  In Windows, we don't need to
+  // make this distinction, but we do anyway in case we might care in the
+  // future for some nutty reason.
+  #defer so_sources $[get_sources(lib_target noinst_lib_target test_lib_target)]
+  #defer st_sources $[get_sources(bin_target noinst_bin_target test_bin_target)]
+  // These are the source files taht our dependency cache file will depend
+  // on.  If it's an empty list, we won't bother writing rules to freshen
+  // the cache file.
+  #define dep_sources $[sort $[filter %.c %.cxx %.h %.I,$[so_sources] $[st_sources]]]
+  #if $[eq $[so_dir],$[st_dir]]
+    // If the static and shared directories are the same, we have to use the
+    // same rules to build both shared and static targets.
+    #set st_sources $[so_sources] $[st_sources]
+    #set so_sources
+  #endif
+#endif // $[build_directory]
+// And these are the various source files, extracted out by type.
+#defer cxx_so_sources $[filter_out %_src.cxx,$[filter %.cxx,$[so_sources]]]
+#defer cxx_st_sources $[filter_out %_src.cxx,$[filter %.cxx,$[st_sources]]]
+#defer c_so_sources $[filter %.c,$[so_sources]]
+#defer c_st_sources $[filter %.c,$[st_sources]]
+#defer h_sources $[filter %.h,$[so_sources] $[st_sources]]
+#defer i_sources $[filter %.I,$[so_sources] $[st_sources]]
+// Would you like pre-compiled headers with that?
+#if $[DO_PCH]
+  #define pch_header_source $[get_precompiled_header(lib_target noinst_lib_target test_lib_target)]
+  #define st_pch_files $[patsubst %.h,$[st_dir]\%.pch,$[pch_header_source]]
+  #define st_pch_obj_files $[patsubst %.h,$[st_dir]\%.obj,$[pch_header_source]]
+#endif
+// This map variable gets us all the various source files from all the
+// targets in this directory.  We need it to look up the context in which
+// to build a particular source file, since some targets may have different
+// requirements (e.g. different local_libs, or different USE_this or
+// USE_that) than other targets.
+#map all_sources get_sources(lib_target noinst_lib_target test_lib_target bin_target noinst_bin_target test_bin_target src_target)
+// We define $[complete_local_libs] at the full set of libraries (from
+// within this tree) that we must link a particular target with.  It is
+// the transitive closure of our dependent libs: the libraries we depend
+// on, plus the libraries those libraries depend on, and so forth.
+#defer complete_local_libs $[unique $[closure all_libs,$[active_libs]]]
+#defer actual_local_libs $[get_metalibs $[TARGET],$[complete_local_libs]]
+#defer actual_nonsrc_local_libs $[filter-out $[all_src_libs $[TARGET],$[actual_local_libs]],$[actual_local_libs]]
+#defer actual_src_local_libs $[filter-out $[actual_nonsrc_local_libs],$[actual_local_libs]]
+// Similarly $[complete_ipath] is the list of directories (from within this
+// tree) we should add to our -I list.  It's basically just one for each
+// directory named in the $[complete_local_libs], above, plus whatever else
+// the user might have explicitly named in $[LOCAL_INCS].
+#defer complete_ipath $[PUBLIC_INCLUDE] $[LOCAL_INCS] $[ODIR]/$[PATH]\
+         $[all_libs $[if $[not $[WINK_THIS]],$[PUBLIC_INCLUDE]],$[TARGET] $[complete_local_libs]] \
+         $[if $[and $[isdir $[TOPDIR]/$[PATH]/src],$[not $[WINK_THIS]]],$[TOPDIR]/$[PATH]/src] \
+         $[foreach tmp,$[LOCAL_LIBS],$[all_libs $[if $[not $[WINK_THIS]],$[PUBLIC_INCLUDE]],$[tmp]]]
+// $[target_ipath is the proper ipath to put on the command line, from the
+// context of a particular target.
+#defer target_ipath $[unique $[complete_ipath]] $[get_ipath]
+// $[converted_ipath] is the properly-formatted version of the include path
+// for Visual Studio .NET.  The resulting list is semicolon separated and
+// uses Windows-style pathnames. Splits on + to allow for sdk style paths that
+// have spaces in them.
+#defer converted_ipath $[split +,$[join ;,$[osfilename $[target_ipath]]]]
+// These are the complete set of extra flags the compiler requires, from
+// the context of a particular file, given in $[file].
+#defer cflags $[all_sources $[get_cflags] $[CFLAGS],$[file]] $[CFLAGS_OPT_$[upcase $[opt]]]
+#defer c++flags $[all_sources $[get_cflags] $[C++FLAGS],$[file]] $[CFLAGS_OPT_$[upcase $[opt]]]
+#defer linkerflags $[LINKER_FLAGS]
+// These are the some flags, sans the compiler optimizations.
+#defer noopt_c++flags $[all_sources $[get_cflags] $[C++FLAGS],$[file]] $[CFLAGS_OPT_$[upcase $[opt]]]
+// $[complete_lpath] is rather like $[complete_ipath]: the list of
+// directories (from within this depot) we should add to our -L list.
+#defer complete_lpath \
+   $[patsubst %,%/$[opt],$[all_libs $[if $[not $[WINK_THIS]],$[ODIR]/$[PATH]],$[actual_nonsrc_local_libs]]] \
+   $[patsubst %,%/win32,$[all_libs $[if $[not $[WINK_THIS]],$[TOPDIR]/$[PATH]],$[actual_src_local_libs]]] \
+   $[LIB_PATH]
+// $[lpath] is like $[target_ipath]: it's the list of directories we should
+// add to our -L list, from the context of a particular target.
+// TODO: fix the other_depots..\lib part of this
+#defer lpath $[sort $[complete_lpath]] $[get_lpath]
+// $[converted_lpath] is the properly-formatted version of the library path
+// for Visual Studio .NET.  The resulting list is semicolon separated and
+// uses Windows-style pathnames. Splits on + to allow for sdk style paths that
+// have spaces in them.
+#defer converted_lpath $[split +,$[join ;,$[osfilename $[lpath]]]]
+// And $[libs] is the set of libraries we will link with.
+#defer libs $[unique $[all_libs $[LIB_BASENAME].lib,$[filter-out $[all_src_libs $[TARGET],$[actual_local_libs]],$[actual_local_libs]]] \
+                     $[patsubst %:c,,%:m %,%$[dllext],$[OTHER_LIBS]] $[get_libs]]
+#defer converted_libs $[patsubst %.lib,%.lib,%,%.lib,$[libs]]
+
+#if $[and $[DO_PCH],$[not $[WINK_THIS]]]
+  // Pre-compiled headers are neat!  Really!
+  #forscopes lib_target noinst_lib_target bin_target noinst_bin_target test_bin_target test_lib_target
+    #if $[USER_PRECOMPILED_HEADER]
+      // The user has decided to just write their own precompiled header - this is more
+      // flexible than a generated precompiled header, but this should probably be removed
+      // after we're free of the legacy project.
+      #define precomp_filename $[USER_PRECOMPILED_HEADER]
+    #elif $[ne $[PRECOMPILE_HEADERS],]
+      #define precomp_filename $[TARGET]precompiled.h
+      #define precomp_h_filename $[ODIR]/$[PATH]/$[precomp_filename]
+      #output $[precomp_h_filename] notouch
+      #format straight
+      #call emit_file_header c
+      #foreach file $[unique $[filter-out %.pm,$[PRECOMPILE_HEADERS]]]
+##include <$[file]>
+      #end file
+      #end $[precomp_h_filename]
+    #endif // $[PRECOMPILE_HEADERS]
+
+    #if $[precomp_filename]
+      #define precomp_c_filename $[ODIR]/$[PATH]/$[precomp_filename:%.h=%.cpp]
+      #output $[precomp_c_filename] notouch
+      #format straight
+      #call emit_file_header c
+##include "$[precomp_filename]"
+      #end $[precomp_c_filename]
+    #endif // $[precomp_filename]
+  #end lib_target noinst_lib_target bin_target noinst_bin_target test_bin_target test_lib_target
+#endif // $[DO_PCH] && ! $[WINK_THIS]
+// Pre-compiled headers are one way to speed the compilation of many C++
+// source files that include similar headers, but another (portable)
+// approach is to compile all the similar source files in one pass.  This
+// is also known as 'gang' compiling.
+//
+// We do this by generating a *_composite.cxx file that has an #include
+// line for each of several actual source files, and then we compile the
+// composite file instead of the original files.
+#if $[not $[WINK_THIS]]
+  #foreach composite_file $[composite_list]
+    #output $[composite_file] notouch
+    #format collapse
+    #call emit_file_header c
+    #foreach file $[$[composite_file]_sources]
+##include "$[file]"
+    #end file
+    #end $[composite_file]
+  #end composite_file
+#endif // ! $[WINK_THIS]
+
+// Now we get down to some real work.  First we consider the dynamic
+// libraries and executables.  Each lib_target is a dynamic library.
+// Each bin_target is a normal C++ executable.
+//
+// But before we do any of that, we pre-compute the guids for all these
+// targets.
+#forscopes lib_target bin_target test_bin_target test_lib_target noinst_bin_target
+  #define proj_guid $[makeguid $[TARGET]]
+  #define proj_guid_text {$[proj_guid]}
+  // Is this an executable?
+  #define is_bin $[if $[filter %bin_target,$[THISSCOPENAME]],1]
+  // Or is this a dynamic library
+  #define is_dynlib $[and $[or $[eq $[THISSCOPENAME],$[PATH]/lib_target],$[eq $[THISSCOPENAME],$[PATH]/test_lib_target]],$[eq $[STATIC],]]
+  #define is_static $[ne $[STATIC],]
+  // Or is this a test?
+  #define is_test $[or $[eq $[THISSCOPENAME],$[PATH]/test_bin_target],$[eq $[THISSCOPENAME],$[PATH]/test_lib_target]]
+  #define have_idl $[autodiscover_idl_files]
+#end lib_target bin_target test_bin_target test_lib_target noinst_bin_target
+// now process them for real
+#forscopes lib_target noinst_lib_target test_lib_target bin_target test_bin_target noinst_bin_target
+  #define build_it $[or $[is_dynlib],$[is_bin],$[is_static]]
+  #if $[not $[is_bin]]
+    // We might need to define a BUILDING_ symbol for win32.  We can use
+    // the BULDING_DLL variable name for this.
+    #define building_var $[upcase $[TARGET]]_API=__declspec(dllexport)
+  #endif
+  #if $[build_it]
+    // List of object files that will be combined to form this target.
+    #define objects \
+      $[components \
+        $[osfilename $[patsubst %,$[RELDIR]\$[%_obj],$[compile_sources]]], \
+        $[active_component_libs]]
+  #endif $[build_it]
+  // OMG! Let's output something already!
+  #if $[not $[WINK_THIS]]
+    #define target_cs
+    #define target_type $[if $[target_cs],cs,vc]
+    #define target_project_file $[ODIR]/$[PATH]/$[TARGET].$[target_type]proj
+    #output $[target_project_file] notouch
+    #format straight
+    #call emit_project_preamble $[target_type],$[TARGET],$[proj_guid_text]
+$[TAB]<Configurations>
+    #foreach opt $[OPTIMIZATION_LEVELS]
+      #if $[is_bin]
+        #define target $[bin_dir]/$[TARGET].exe
+      #else
+        #define target $[bin_dir]/$[get_dllname $[LIB_BASENAME]].$[dlllib]
+      #endif
+      #call emit_project_configuration_preamble $[opt],$[opt],$[is_bin],$[is_dynlib],$[have_idl],$[building_var],$[target],$[bin_dir]
+      #define defines $[join ;,$[EXTRA_DEFINES_$[upcase $[opt]]] $[EXTRA_DEFINES] $[building_var]]
+      #call emit_project_compiler $[opt],$[converted_ipath],$[defines],$[precomp_filename],$[C++FLAGS]
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCCustomBuildTool"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+      #define additionalDepends $[objects] \
+                                $[all_libs $[if $[WINK_THIS],$[LIB_BASENAME].lib],$[actual_local_libs]] \
+                                $[OTHER_LIBS]
+      #if $[not $[is_bin]]
+        #define additionalDepends $[unique $[converted_libs] $[additionalDepends]]
+      #endif
+      #call emit_project_linker $[opt],$[build_it],$[is_bin],$[target],$[additionalDepends],\
+                                $[converted_lpath],$[bin_dir],$[IGNORE_DEFAULT_LIBRARY_NAMES],$[is_dynlib],$[linkerflags]
+      #call emit_project_midl $[opt],$[standardize $[ODIR]/$[PATH]]
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCPostBuildEventTool"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCPreBuildEventTool"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCPreLinkEventTool"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+      #call emit_project_resource_compiler $[opt],$[converted_ipath]
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCWebServiceProxyGeneratorTool"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCXMLDataGeneratorTool"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCWebDeploymentTool"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCManagedWrapperGeneratorTool"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+$[TAB]$[TAB]$[TAB]<Tool
+$[TAB]$[TAB]$[TAB]$[TAB]Name="VCAuxiliaryManagedWrapperGeneratorTool"
+$[TAB]$[TAB]$[TAB]$[TAB]/>
+      #call emit_project_configuration_postscript
+    #end opt
+$[TAB]</Configurations>
+    #call emit_project_references $[all_libs $[TARGET],$[filter-out $[all_src_libs $[TARGET],$[actual_local_libs]],$[sort $[actual_local_libs]]]]
+    #call emit_project_files $[sort $[filter-out $[PLATFORM_SOURCES],$[get_sources]]],\
+                             $[BUILD_SYSTEM_FILES],\
+                             $[PERL_FILES],\
+                             $[SWIG_FILES],\
+                             $[DAS_FILES],\
+                             $[NASM_FILES],\
+                             $[CXXTEST_FILES],\
+                             $[TOLUA_FILES],\
+                             $[precomp_filename],\
+                             $[EXTRA_DIST] $[autodiscover_misc_files],\
+                             $[ORPHANED_FILES],\
+                             $[PLATFORM_SOURCES],\
+                             $[autodiscover_idl_files],\
+                             $[OPTIMIZATION_LEVELS]
+    #call emit_project_postscript $[target_type]
+    #end $[target_project_file]
+  #endif // ! $[WINK_THIS]
+#end lib_target noinst_lib_target test_lib_target bin_target test_bin_target noinst_bin_target

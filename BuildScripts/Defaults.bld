@@ -1,0 +1,107 @@
+//////////////////////////////////////////////////////////////////////
+//
+//    Defaults.bld
+//
+//////////////////////////////////////////////////////////////////////
+//
+// This file contains settings for things that you are allowed to
+// override on a per-target basis, but are not required to do so.
+//
+//////////////////////////////////////////////////////////////////////
+
+
+// Define DIR_TYPE as "src", since that's the most common kind of a source
+// file.
+#define DIR_TYPE src
+
+// By default, a project's top-level source directory is added to the 
+// include path for everyone who's using the project locally.
+// TODO: make sure this is right
+#defer PUBLIC_INCLUDE $[TOPDIR]/$[PATH]
+
+// By default, the library file a target generates is the name of the
+// target with the right extension.
+#defer LIB_BASENAME $[TARGET]
+
+// By default, we copy in test directory's .h, .cpp, and .cxx files ONLY
+// TODO: decide if this is right, or still needed/wanted
+//#defer INSTALL_TEST $[if $[isdir test],$[wildcard test/*.h test/*.cpp test/*.cxx]]
+//#defer autodiscover_install_test $[if $[isdir test],$[wildcard test/*.h test/*.cpp test/*.cxx]]
+
+// By default, your documents to be installed are those in the doc directory.
+// TODO: decide if this is right, or still needed/wanted
+//#defer INSTALL_DOCS $[if $[isdir doc],$[wildcard doc/*]]
+//#defer autodiscover_install_docs $[if $[isdir doc],$[wildcard doc/*]]
+
+// By default, any .pm files should be documented with Perldoc.
+// TODO: decide if this is right, or still needed/wanted
+//#defer INSTALL_PERLDOCS $[if $[isdir $[TARGET]],$[wildcard $[TARGET]/*.pm]]
+//#defer autodiscover_install_docs $[if $[isdir doc],$[wildcard doc/*]]
+
+// By default, your target is the name of your directory.
+#defer TARGET $[notdir $[PATH]]
+
+//
+// Collect as much as we can automatically
+//
+
+// First a function to help us find files that might belong to this scope
+#defun autodiscover_scan dir
+  #define scan_collect
+
+  #if $[SKIP_AUTODISCOVER]
+    #set scan_collect ""
+  #elif $[or $[eq $[dir],inc],$[eq $[dir],lib],$[eq $[dir],bin]]
+    #set scan_collect ""
+  #elif $[eq $[dir],$[PATH]]
+    // TODO: This will cause hell with lib and other dependency discovery until the
+    // dependency cache file fixes go in.
+    #if $[not $[WINK_THIS]]
+      #define scan_tmp $[wildcard *]
+      #define scan_dirs
+      #foreach fle $[scan_tmp]
+        #if $[isdir $[fle]]
+          #set scan_dirs $[scan_dirs] $[fle]
+          #if $[not $[isfile $[fle]/$[SOURCE_FILENAME]]]
+            #set scan_collect $[scan_collect] $[autodiscover_scan ./$[fle]]
+          #endif
+        #endif
+      #end fle
+      #set scan_collect $[scan_collect] $[filter-out $[scan_dirs],$[scan_tmp]]
+    #endif // ! $[WINK_THIS]
+  #elif $[isdir $[standardize $[dir]]]
+    #define scan_tmp $[wildcard $[standardize $[dir]]/*]
+    #define scan_dirs
+    #foreach fle $[scan_tmp]
+      #if $[isdir $[fle]]
+        #set scan_dirs $[scan_dirs] $[fle]
+        #if $[not $[isfile $[fle]/$[SOURCE_FILENAME]]]
+          #set scan_collect $[scan_collect] $[autodiscover_scan $[fle]]
+        #endif
+      #endif
+    #end fle
+    #set scan_collect $[scan_collect] $[filter-out $[scan_dirs],$[scan_tmp]]
+  #else
+    #set scan_collect $[dir]
+  #endif
+  $[scan_collect]
+#end autodiscover_scan
+
+// Now the discovery variables
+#defer autodiscover_versioned_files $[filter-out %~,$[autodiscover_scan $[PATH]]]
+#defer autodiscover_sources $[filter $[COMPILABLE_TYPES],$[autodiscover_versioned_files]]
+#defer autodiscover_platform_sources $[filter $[matrix $[downcase $[KNOWN_PLATFORMS]],/%],$[autodiscover_sources]]
+#defer autodiscover_perl_sources $[filter $[PERL_TYPES],$[autodiscover_versioned_files]]
+#defer autodiscover_swig_files $[filter %.i,$[autodiscover_versioned_files]]
+#defer autodiscover_build_files $[filter %.bld,$[autodiscover_versioned_files]]
+#defer autodiscover_idl_files $[if $[filter %.idl,$[autodiscover_versioned_files]],$[filter %.def %.idl %.rgs,$[autodiscover_versioned_files]]]
+#defer autodiscover_misc_files $[filter-out $[COMPILABLE_TYPES] $[PERL_TYPES] %.bld $[autodiscover_idl_files],$[autodiscover_versioned_files]]
+
+// By default, your install headers are the ones in the directory with
+// the same name as your library.
+#defer INSTALL_HEADERS $[if $[isdir $[TARGET]],$[filter $[TARGET]/%.h $[TARGET]/%.hpp, $[autodiscover_scan $[PATH]]]]
+
+// By default, you have unit tests in your library.  Set this to 0
+// if you don't.  Things that don't depend on tools (e.g., STLport)
+// won't; pretty much every other library should.
+#define HAVE_UNIT_TESTS 1

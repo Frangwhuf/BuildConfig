@@ -1,0 +1,51 @@
+//
+// Template.bld
+//
+// This file defines the set of output files that will be generated to
+// support a Microsoft Visual C++ .NET solution / project build.  It
+// generates .dll files, compiles source files to .obj files,
+// and does other Windows-specific things.
+//
+// Before this file is processed, the following files are read and
+// processed (in order):
+//
+// The Depot.bld file in the root of the current source hierarchy
+//   (e.g. C:\o\trunk\olive\Depot.bld)
+// <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
+// <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)
+// The user's OCONFIG_CONFIG file. (included from <TOOL>/Depot.bld)
+// <TOOL>/oconfig/bldtempl/System.bld (included from <TOOL>/Depot.bld)
+// All of the Sources.bld files in the current source hierarchy (read by oconfig)
+// <TOOL>/oconfig/bldtempl/Global.bld (name defined in System.bld (GLOBAL_FILE), read by oconfig)
+// <TOOL>/oconfig/bldtempl/TreeSetup.bld
+// <TOOL>/oconfig/bldtempl/Global.msvc.bld (name defined in System.bld (GLOBAL_TYPE_FILE), included from Global.bld)
+// <TOOL>/oconfig/bldtempl/compilerSettings.bld (included from Global.msvc.bld)
+// <TOOL>/oconfig/bldtempl/Depends.bld  (once for each Sources.bld file, name defined in System.bld (DEPENDS_FILE),
+//                                       read by oconfig)
+// <TOOL>/oconfig/bldtempl/Template.bld ((this file) once for each Sources.bld file, name defined in System.bld
+//                                       (TEMPLATE_FILE), read by oconfig)
+
+#if $[not $[defined IGNORE_TARGETS]]
+  // dependency cache files need to be written after
+  // Depends.bld is read because oconfig create's inter-library
+  // dependencies immediately after reading Depends.bld
+  #define foo
+  #forscopes *
+    #if $[ne $[SOURCES],]
+      #foreach file $[SOURCES]
+        #set foo $[dependencies $[file]]
+      #end file
+    #endif
+  #end *
+  #if $[eq $[PATH],]
+    #depsave $[TOPDIR]/$[DEPOT].dep
+  #else
+    #depsave $[TOPDIR]/$[PATH]/$[subst /,_,$[PATH]].dep
+  #endif
+
+  #sinclude $[BUILD_SCRIPTS]/Template.$[BUILD_TYPE].bld
+  #sinclude $[BUILD_SCRIPTS]/Template.$[DIR_TYPE].bld
+  #sinclude $[BUILD_SCRIPTS]/Template.$[DIR_TYPE].$[BUILD_TYPE].bld
+#endif
+

@@ -1,0 +1,25 @@
+//
+// TreeSetup.bld
+//
+// This file contains further instructions to set up a depot when using
+// oconfig.  At present this makes sure the build directory tree is present.
+
+#define REQUIRED_OCONFIG_VERSION 1.6
+
+#if $[< $[OCONFIG_VERSION],$[REQUIRED_OCONFIG_VERSION]]
+  #error You need at least oconfig version $[REQUIRED_OCONFIG_VERSION] to configure this tree.
+#endif
+
+#defsub make_redirect dir
+  #define file $[dir]/$[REDIRECT_FILENAME]
+  #output $[file] notest
+  #format straight
+##define TOPDIR $[osfilename $[TOPDIR]]
+  #end $[file]
+#end make_redirect
+
+#foreach dir bin inc lib etc doc
+  #mkdir $[TOPDIR]/$[dir]
+  #call make_redirect $[TOPDIR]/$[dir]
+#end dir
+
