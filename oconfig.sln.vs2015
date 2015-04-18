@@ -1,0 +1,33 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2015
+VisualStudioVersion = 14.0.22609.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "oconfig", "oconfig.vcxproj", "{68592F14-7228-3CF6-273E-85B455E6BD2C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		debug|Win32 = debug|Win32
+		debug|x64 = debug|x64
+		qa|Win32 = qa|Win32
+		qa|x64 = qa|x64
+		release|Win32 = release|Win32
+		release|x64 = release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.debug|Win32.ActiveCfg = debug|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.debug|Win32.Build.0 = debug|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.debug|x64.ActiveCfg = debug|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.debug|x64.Build.0 = debug|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.qa|Win32.ActiveCfg = qa|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.qa|Win32.Build.0 = qa|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.qa|x64.ActiveCfg = qa|x64
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.qa|x64.Build.0 = qa|x64
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.release|Win32.ActiveCfg = release|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.release|Win32.Build.0 = release|Win32
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.release|x64.ActiveCfg = release|x64
+		{68592F14-7228-3CF6-273E-85B455E6BD2C}.release|x64.Build.0 = release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

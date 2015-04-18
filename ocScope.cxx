@@ -430,9 +430,9 @@ find_map_variable(const string &varname) {
   // No such map variable.  Check the stack.
   ScopeStack::reverse_iterator si;
   for (si = _scope_stack.rbegin(); si != _scope_stack.rend(); ++si) {
-    MapVariableDefinition &def = (*si)->p_find_map_variable(varname);
-    if (&def != &_null_map_def) {
-      return def;
+    MapVariableDefinition &inner_def = (*si)->p_find_map_variable(varname);
+    if (&inner_def != &_null_map_def) {
+      return inner_def;
     }
   }
 
