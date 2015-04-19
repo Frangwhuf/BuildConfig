@@ -41,6 +41,10 @@
 
 // We really need to know how to find the bulid scripts.  We will look to
 // BUILD_SCRIPTS for this
+#if $[and $[eq $[BUILD_SCRIPTS],], $[isdir $[DEVTOOLS]/etc/BuildScripts]]
+  #define BUILD_SCRIPTS $[DEVTOOLS]/etc/BuildScripts
+  #print Auto-detected build scripts at $[BUILD_SCRIPTS]
+#endif
 #if $[eq $[BUILD_SCRIPTS],]
   #error "You must define BUILD_SCRIPTS and point it to a local copy of your build scripts."
 #endif
