@@ -75,7 +75,7 @@ $[TAB]</Configurations>
 #define depot_project_xfile $[emit_project_filename $[TOPDIR]/$[DEPOT]]
 #output $[depot_project_xfile] notouch
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 $[TAB]<ItemGroup Label="ProjectConfigurations">
 $[T2]<ProjectConfiguration Include="omni|Win32">
 $[T2]$[TAB]<Configuration>omni</Configuration>
@@ -94,9 +94,11 @@ $[TAB]</PropertyGroup>
 $[TAB]<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 $[TAB]<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='omni|Win32'" Label="Configuration">
 $[T2]<ConfigurationType>Application</ConfigurationType>
+$[T2]<PlatformToolset>v140</PlatformToolset>
 $[TAB]</PropertyGroup>
 $[TAB]<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='omni|x64'" Label="Configuration">
 $[T2]<ConfigurationType>Application</ConfigurationType>
+$[T2]<PlatformToolset>v140</PlatformToolset>
 $[TAB]</PropertyGroup>
 $[TAB]<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
 $[TAB]<ImportGroup Label="ExtensionSettings">
@@ -167,8 +169,10 @@ $[TAB]</ItemGroup>
 #define depot_guid {8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}
 #output $[depot_solution_file] notouch
 #format straight
-Microsoft Visual Studio Solution File, Format Version 11.00
-## Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 14.00
+## Visual Studio 2015
+VisualStudioVersion = 14.0.22609.0
+MinimumVisualStudioVersion = 10.0.40219.1
 #define num_projects 0
 #forscopes $[project_scopes]
   #define proj_guid $[makeguid $[TARGET]]
@@ -184,37 +188,39 @@ Global
   #print Do not know how to emit source control for VS2010
 #endif // ! $[NO_SOURCE_CONTROL]
 $[TAB]GlobalSection(SolutionConfigurationPlatforms) = preSolution
-#foreach opt $[OPTIMIZATION_LEVELS]
+#foreach opt $[OPTIMIZATION_LEVELS_WITH_OMNI]
 $[T2]$[opt]|Win32 = $[opt]|Win32
 $[T2]$[opt]|x64 = $[opt]|x64
 #end opt
-$[T2]omni|Win32 = omni|Win32
-$[T2]omni|x64 = omni|x64
 $[TAB]EndGlobalSection
 $[TAB]GlobalSection(ProjectConfigurationPlatforms) = postSolution
 #forscopes $[project_scopes]
   #define guid $[makeguid $[TARGET]]
   #define cur_scope $[split /,$[THISSCOPENAME]]
   #define cur_leaf_scope $[word $[words $[cur_scope]],$[cur_scope]]
-  #foreach opt $[OPTIMIZATION_LEVELS]
-$[T2]{$[guid]}.$[opt]|Win32.ActiveCfg = $[opt]|Win32
-$[T2]{$[guid]}.$[opt]|x64.ActiveCfg = $[opt]|x64
+  #foreach opt $[OPTIMIZATION_LEVELS_WITH_OMNI]
+    #define local_opt $[if $[eq $[opt],omni],debug,$[opt]]
+$[T2]{$[guid]}.$[opt]|Win32.ActiveCfg = $[local_opt]|Win32
     #if $[not $[and $[eq $[cur_leaf_scope],test_bin_target],\
                          $[not $[BUILD_TESTS]]]]
-$[T2]{$[guid]}.$[opt]|Win32.Build.0 = $[opt]|Win32
-$[T2]{$[guid]}.$[opt]|x64.Build.0 = $[opt]|x64
+$[T2]{$[guid]}.$[opt]|Win32.Build.0 = $[local_opt]|Win32
+    #endif // cur_leaf_scope != test_bin_target
+$[T2]{$[guid]}.$[opt]|x64.ActiveCfg = $[local_opt]|x64
+    #if $[not $[and $[eq $[cur_leaf_scope],test_bin_target],\
+                         $[not $[BUILD_TESTS]]]]
+$[T2]{$[guid]}.$[opt]|x64.Build.0 = $[local_opt]|x64
     #endif // cur_leaf_scope != test_bin_target
   #end opt
 #end $[project_scopes]
-$[T2]$[depot_proj_guid_text].omni|Win32.ActiveCfg = omni|Win32
-$[T2]$[depot_proj_guid_text].omni|Win32.Build.0 = omni|Win32
-$[T2]$[depot_proj_guid_text].omni|x64.ActiveCfg = omni|x64
-$[T2]$[depot_proj_guid_text].omni|x64.Build.0 = omni|x64
+#foreach opt $[OPTIMIZATION_LEVELS_WITH_OMNI]
+$[T2]$[depot_proj_guid_text].$[opt]|Win32.ActiveCfg = omni|Win32
+$[T2]$[depot_proj_guid_text].$[opt]|Win32.Build.0 = omni|Win32
+$[T2]$[depot_proj_guid_text].$[opt]|x64.ActiveCfg = omni|x64
+$[T2]$[depot_proj_guid_text].$[opt]|x64.Build.0 = omni|x64
+#end opt
 $[TAB]EndGlobalSection
 $[TAB]GlobalSection(SolutionProperties) = preSolution
 $[T2]HideSolutionNode = FALSE
-$[TAB]EndGlobalSection
-$[TAB]GlobalSection(NestedProjects) = preSolution
 $[TAB]EndGlobalSection
 $[TAB]GlobalSection(ExtensibilityGlobals) = postSolution
 $[T2]VisualSVNWorkingCopyRoot = $[osfilename $[TOPDIR]]

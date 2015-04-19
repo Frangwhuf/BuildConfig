@@ -185,6 +185,16 @@ $[TAB]$[TAB]<EmbedManifest>false</EmbedManifest>
 $[TAB]$[TAB]<LinkIncremental>true</LinkIncremental>
 $[TAB]$[TAB]<LinkIncremental Condition="'$(Configuration)'=='release'">false</LinkIncremental>
 $[TAB]</PropertyGroup>
+  #foreach opt $[opt_levels]
+$[TAB]<PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='$[opt]|Win32'">
+$[TAB]$[TAB]<PlatformToolset>v140</PlatformToolset>
+$[TAB]</PropertyGroup>
+  #end opt
+  #foreach opt $[opt_levels]
+$[TAB]<PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='$[opt]|x64'">
+$[TAB]$[TAB]<PlatformToolset>v140</PlatformToolset>
+$[TAB]</PropertyGroup>
+  #end opt
 #end emit_project_highlevel
 
 //
@@ -434,6 +444,24 @@ $[TAB]$[TAB]</None>
 #end emit_filter_orphans
 
 //
+// emit filters for local include files
+//
+#defsub emit_filter_includes pth,files
+  #foreach fle $[files]
+$[TAB]$[TAB]<ClInclude Include="$[osfilename $[pth]/$[fle]]" />
+  #end fle
+#end emit_filter_includes
+
+//
+// emit filters for local compilable files
+//
+#defsub emit_filter_compiles pth,files
+  #foreach fle $[files]
+$[TAB]$[TAB]<ClCompile Include="$[osfilename $[pth]/$[fle]]" />
+  #end fle
+#end emit_filter_compiles
+
+//
 // emit filter folders
 //
 #defun get_dir_set dirname
@@ -562,7 +590,7 @@ $[TAB]</ItemGroup>
 //
 #defsub emit_vcproject_preamble name,guid,opt_levels
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 $[TAB]<ItemGroup Label="ProjectConfigurations">
   #foreach opt $[opt_levels]
 $[TAB]$[TAB]<ProjectConfiguration Include="$[opt]|Win32">

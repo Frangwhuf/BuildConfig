@@ -23,7 +23,8 @@
 //             runs at a more reasonable speed.
 //   RELEASE - Fully optimized, most asserts removed, this is the version
 //             we would ship
-#define OPTIMIZATION_LEVELS debug qa release
+#define OPTIMIZATION_LEVELS_WITH_OMNI debug omni qa release
+#define OPTIMIZATION_LEVELS $[filter-out omni,$[OPTIMIZATION_LEVELS_WITH_OMNI]]
 
 
 // First, make sure the build tree is present and ready.  This needs

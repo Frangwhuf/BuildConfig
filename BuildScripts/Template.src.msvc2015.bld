@@ -268,6 +268,12 @@ $[TAB]<ItemGroup>
   #call emit_filter_orphans $[TOPDIR]/$[PATH],$[ORPHANED_FILES]
   #call emit_filter_folders $[TOPDIR]/$[PATH],$[TARGET],$[INSTALL_HEADERS],$[PLATFORM_SOURCES],$[BUILD_SYSTEM_FILES],$[final_misc_files],$[ORPHANED_FILES]
 $[TAB]</ItemGroup>
+$[TAB]<ItemGroup>
+  #call emit_filter_includes $[TOPDIR]/$[PATH],$[filter %.h %.I,$[final_local_files]]
+$[TAB]</ItemGroup>
+$[TAB]<ItemGroup>
+  #call emit_filter_compiles $[TOPDIR]/$[PATH],$[filter-out %.h %.I, $[final_local_files]]
+$[TAB]</ItemGroup>
 </Project>
   #end $[target_project_filter_file]
 
