@@ -269,7 +269,7 @@ $[TAB]$[TAB]$[TAB]<GenerateManifest>false</GenerateManifest>
 $[TAB]$[TAB]$[TAB]<AdditionalLibraryDirectories>$[lpth]</AdditionalLibraryDirectories>
 $[TAB]$[TAB]$[TAB]<AdditionalDependencies Condition="'$(Configuration)'=='debug'">$[join ;,$[WIN_SYS_LIBS] $[patsubst %.lib,%D.lib,$[lbs]]]</AdditionalDependencies>
 $[TAB]$[TAB]$[TAB]<AdditionalDependencies Condition="'$(Configuration)'=='qa'">$[join ;,$[WIN_SYS_LIBS] $[patsubst %.lib,%Q.lib,$[lbs]]]</AdditionalDependencies>
-$[TAB]$[TAB]$[TAB]<AdditionalDependencies Condition="'$(Configuration)'=='release'">$[join ;,$[WIN_SYS_LIBS] %[lbs]]</AdditionalDependencies>
+$[TAB]$[TAB]$[TAB]<AdditionalDependencies Condition="'$(Configuration)'=='release'">$[join ;,$[WIN_SYS_LIBS] $[lbs]]</AdditionalDependencies>
   #if $[ne $[ibin],]
 $[TAB]$[TAB]$[TAB]<SubSystem>Console</SubSystem>
   #else

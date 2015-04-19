@@ -1246,7 +1246,7 @@ scan_directory(vector_string &contents) const {
   FindClose(handle);
 
   auto ci = contents.begin();
-  ci += orig_size;
+  ci += static_cast<int>(orig_size);
   sort(ci, contents.end());
   return scan_ok;
   

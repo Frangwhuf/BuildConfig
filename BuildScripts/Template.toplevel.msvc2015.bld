@@ -185,7 +185,7 @@ Project("$[depot_guid]") = "$[DEPOT]", "$[DEPOT].vcxproj", "$[depot_proj_guid_te
 EndProject
 Global
 #if $[not $[NO_SOURCE_CONTROL]]
-  #print Do not know how to emit source control for VS2010
+  #print Do not know how to emit source control for VS2015
 #endif // ! $[NO_SOURCE_CONTROL]
 $[TAB]GlobalSection(SolutionConfigurationPlatforms) = preSolution
 #foreach opt $[OPTIMIZATION_LEVELS_WITH_OMNI]

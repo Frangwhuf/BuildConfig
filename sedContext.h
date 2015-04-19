@@ -18,6 +18,9 @@
 class SedContext {
 public:
   SedContext(ostream &out);
+  SedContext(SedContext &&) = delete;
+
+  SedContext & operator=(SedContext &&) = delete;
 
   int _line_number;
   bool _is_last_line;

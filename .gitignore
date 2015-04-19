@@ -6,3 +6,4 @@
 /.vs
 /debug
 /*.dep
+/release
