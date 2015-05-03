@@ -8,7 +8,7 @@
 // processed (in order):
 //
 // The Depot.bld file in the root of the current source hierarchy
-//   (e.g. C:\o\trunk\olive\Depot.bld)
+//   (e.g. C:\personal\Platform\Depot.bld)
 // <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
 // <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
 // <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)
@@ -30,11 +30,25 @@
 // TODO: do I still want/need this?
 #map subdirs
 // Iterate through all of our known source files.  Each src
-// type file gets it's corresponding Makefile listed here.
+// type file gets its corresponding Makefile listed here.
 // However, we test for $[DIR_TYPE] of toplevel, because the
 // source directories typically don't define their own DIR_TYPE
 // variable, and they end up inheriting this one dynamically.
+#define total_to_check
 #forscopes */
+  #define count_of_leaf_children 0
+#end */
+#define increment_scopes
+#define project_scopes */lib_target */noinst_lib_target */test_lib_target */bin_target */test_bin_target */noinst_bin_target
+#forscopes $[project_scopes]
+  #if $[eq $[increment_scopes],]
+    #set increment_scopes $[PARENTSCOPENAME]
+  #else
+    #set increment_scopes $[increment_scopes] $[PARENTSCOPENAME]
+  #endif
+#end $[project_scopes]
+#forscopes */
+  #define have_src_parent
   #if $[and $[ne $[DIR_TYPE],group],$[or $[ne $[DIR_TYPE],toplevel],$[ne $[PATH],]]]
     #if $[build_directory]
       #if $[not $[defined IGNORE_TARGETS]]
@@ -42,7 +56,47 @@
       #endif
     #endif
   #endif
+  #define tmp_scope $[split "/", $[THISSCOPENAME]]
+  #define joined_scope $[THISSCOPENAME]
+  #define scope_collection
+  #while $[> $[words $[tmp_scope]],0]
+    #set tmp_scope $[wordlist 1, $[words $[tmp_scope]], $[tmp_scope]]
+    #if $[ne $[tmp_scope],]
+      #set joined_scope $[join /,$[tmp_scope]]/
+      #if $[eq $[scope_collection],]
+        #set scope_collection $[joined_scope]
+      #else
+        #set scope_collection $[scope_collection] $[joined_scope]
+      #endif
+    #endif
+  #end $[> $[words $[tmp_scope]],0]
+  #if $[eq $[total_to_check],]
+    #set total_to_check $[THISSCOPENAME];$[join :,$[scope_collection]]
+  #else
+    #set total_to_check $[total_to_check]|$[THISSCOPENAME];$[join :,$[scope_collection]]
+  #endif
 #end */
+#foreach to_check $[split "|",$[total_to_check]]
+  #define tgt $[word 1,$[split ";",$[to_check]]]
+  #foreach parent $[split ":",$[word 2,$[split ";",$[to_check]]]]
+	#if $[eq $[DIR_TYPE($[parent])],src]
+	  #if $[eq $[increment_scopes],]
+	    #set increment_scopes $[parent]
+	  #else
+	    #set increment_scopes $[increment_scopes] $[parent]
+	  #endif
+	  #forscopes $[tgt]
+	    #set have_src_parent 1
+		#if $[eq $[PARENTSCOPENAME],]
+		  #set PARENTSCOPENAME $[parent]
+		#endif
+	  #end $[tgt]
+	#endif
+  #end parent
+#end to_check
+#forscopes $[increment_scopes]
+  #set count_of_leaf_children $[+ $[count_of_leaf_children],1]
+#end $[increment_scopes]
 
 
 // TODO: determine if I still need/want these
@@ -113,7 +167,7 @@
       #end eba
     #endif
 
-    //Setup the configuration script... this must be defined with OLIVE_CONFIG
+    //Setup the configuration script... this must be defined with CONFIG_CONFIG
     #define configrc_scopes */lib_target */bin_target
     #forscopes $[configrc_scopes]
       #set all_config_paths $[all_config_paths] $[osfilename $[TOPDIR]/$[PATH]]
@@ -126,7 +180,7 @@
     #endif
     #set all_config_paths $[sort $[all_config_paths]] 
     #call emit_script_prepend_pathlike $[all_config_paths],CFG_PATH
-    #call emit_script_variable OLIVE_CONFIG,:configpath=CFG_PATH ART_PATH:configname=Configrc:
+    #call emit_script_variable CONFIG_CONFIG,:configpath=CFG_PATH ART_PATH:configname=Configrc:
     #call emit_script_variable $[upcase $[DEPOT]]_INITIALIZED,1
   #call emit_script_conditional_end init
   #end $[vars_batch_file]

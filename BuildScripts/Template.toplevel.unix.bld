@@ -8,7 +8,7 @@
 // processed (in order):
 //
 // The Depot.bld file in the root of the current source hierarchy
-//   (e.g. C:\o\trunk\olive\Depot.bld)
+//   (e.g. C:\personal\Platform\Depot.bld)
 // <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
 // <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
 // <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)

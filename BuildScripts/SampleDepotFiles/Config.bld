@@ -23,7 +23,7 @@
 // an updated source tree (including a new Config.bld) without
 // risking accidentally losing your customizations.  This also avoids
 // having to redefine the same variables in different packages (for
-// instance in tool and in olive).
+// instance in Platform and in Projects).
 //
 // The syntax in this file resembles some hybrid between C++
 // preprocessor declarations and GNU make variables.  This is the
@@ -133,7 +133,7 @@
 //    #define CXX g++
 //  #endif
 //
-//  // gcc might run into template limits on some parts of Olive.
+//  // gcc might run into template limits on some parts of Platform.
 //  #define CFLAGS_GEN -Wall -W -Wno-sign-compare -Wno-unused -pthread -fpic -fmerge-constants -msse 
 //  #define C++FLAGS_GEN $[CFLAGS_GEN] -ftemplate-depth-32 -Wno-non-virtual-dtor -Wno-deprecated -fmerge-constants 
 //

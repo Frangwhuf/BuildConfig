@@ -234,7 +234,7 @@
 
 // retrieve the depot name for the given path (relative to toplevel)
 // used to detect when we're including from a "remote" depot, and
-// then return the depot name (../olive/foo/bar) will return olive
+// then return the depot name (../Platform/foo/bar) will return Platform
 // (foo/bar) will return $[DEPOT]
 // TODO: decide if I still need/want this.  Probably do.
 //#defun get_depot_path path

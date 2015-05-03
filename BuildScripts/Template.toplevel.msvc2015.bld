@@ -10,7 +10,7 @@
 // processed (in order):
 //
 // The Depot.bld file in the root of the current source hierarchy
-//   (e.g. C:\o\trunk\olive\Depot.bld)
+//   (e.g. C:\personal\Platform\Depot.bld)
 // <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
 // <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
 // <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)
@@ -34,43 +34,9 @@
 // This is the toplevel directory, e.g. C:\o\trunk\tool.  Here we
 // build the depot solution file and also synthesize the tool_config.h
 // (or whichever file) we may need.
-#define depot_project_file $[TOPDIR]/$[DEPOT].vcproj
 #define depot_proj_guid $[makeguid $[DEPOT]]
 #define depot_proj_guid_text {$[depot_proj_guid]}
 #define depot_proj_build_files $[sort $[EXTRA_DIST] $[PACKAGE_FILENAME] $[SOURCE_FILENAME]]
-#output $[depot_project_file] notouch
-#call emit_project_preamble $[DEPOT],$[depot_proj_guid_text],$[OPTIMIZATION_LEVELS]
-$[TAB]<Configurations>
-$[T2]<Configuration
-$[T2]$[TAB]Name="omni|Win32">
-$[T2]</Configuration>
-$[TAB]</Configurations>
-#call emit_project_references $[ne ,]  // the expression is there to avoid a warning about a missing parameter
-#set autodiscover_misc_files $[filter-out bin/%,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out doc/%,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out etc/%,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out inc/%,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out lib/%,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out $[DEPOT].sln,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out $[DEPOT].vcproj%,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out $[DEPOT].ncb,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out $[DEPOT].suo,$[autodiscover_misc_files]]
-#call emit_project_files ,\
-                         $[depot_proj_build_files],\
-                         $[autodiscover_perl_sources],\
-                         $[autodiscover_swig_files],\
-                         ,\
-                         ,\
-                         ,\
-                         ,\
-                         ,\
-                         $[autodiscover_misc_files],\
-                         $[ORPHANED_FILES],\
-                         ,\
-                         ,\
-                         omni
-#call emit_project_postscript xxx
-#end $[depot_project_file]
 
 #define depot_project_xfile $[emit_project_filename $[TOPDIR]/$[DEPOT]]
 #output $[depot_project_xfile] notouch
@@ -166,61 +132,99 @@ $[TAB]</ItemGroup>
 #define project_scopes */lib_target */noinst_lib_target */test_lib_target */bin_target */test_bin_target */noinst_bin_target
 
 #define depot_solution_file $[TOPDIR]/$[DEPOT].sln
-#define depot_guid {8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}
+#define project_record_guid {8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}
+#define project_folder_guid {2150E333-8FDC-42A3-9474-1A3956D46DE8}
 #output $[depot_solution_file] notouch
 #format straight
-Microsoft Visual Studio Solution File, Format Version 14.00
-## Visual Studio 2015
+Microsoft Visual Studio Solution File, Format Version 12.00
+## Visual Studio 14
 VisualStudioVersion = 14.0.22609.0
 MinimumVisualStudioVersion = 10.0.40219.1
 #define num_projects 0
+#define possibly_nested_scopes
 #forscopes $[project_scopes]
-  #define proj_guid $[makeguid $[TARGET]]
+  #if $[eq $[possibly_nested_scopes],]
+    #set possibly_nested_scopes $[THISSCOPENAME]
+  #else
+    #set possibly_nested_scopes $[possibly_nested_scopes] $[THISSCOPENAME]
+  #endif
+  #define proj_guid $[makeguid $[THISSCOPENAME]/$[TARGET]]
   #define proj_guid_text {$[proj_guid]}
-Project("$[depot_guid]") = "$[TARGET]", "$[osfilename $[PATH]]\$[TARGET].vcxproj", "$[proj_guid_text]"
+Project("$[project_record_guid]") = "$[TARGET]", "$[osfilename $[PATH]]\$[TARGET].vcxproj", "$[proj_guid_text]"
 EndProject
   #set num_projects $[+ $[num_projects],1]
 #end $[project_scopes]
-Project("$[depot_guid]") = "$[DEPOT]", "$[DEPOT].vcxproj", "$[depot_proj_guid_text]"
+#forscopes */
+  #if $[eq $[have_src_parent],1]
+    #if $[eq $[possibly_nested_scopes],]
+	  #set possibly_nested_scopes $[THISSCOPENAME]
+	#else
+	  #set possibly_nested_scopes $[possibly_nested_scopes] $[THISSCOPENAME]
+	#endif
+  #endif
+  #define proj_guid $[makeguid $[THISSCOPENAME]]
+  #define proj_guid_text {$[proj_guid]}
+  #if $[> $[count_of_leaf_children],1]
+Project("$[project_folder_guid]") = "$[notdir $[PATH]]", "$[notdir $[PATH]]", "{$[makeguid $[THISSCOPENAME]]}"
+EndProject
+  #endif
+#end */
+Project("$[project_record_guid]") = "$[DEPOT]", "$[DEPOT].vcxproj", "$[depot_proj_guid_text]"
 EndProject
 Global
-#if $[not $[NO_SOURCE_CONTROL]]
-  #print Do not know how to emit source control for VS2015
-#endif // ! $[NO_SOURCE_CONTROL]
 $[TAB]GlobalSection(SolutionConfigurationPlatforms) = preSolution
-#foreach opt $[OPTIMIZATION_LEVELS_WITH_OMNI]
+#foreach opt $[OPTIMIZATION_LEVELS]
 $[T2]$[opt]|Win32 = $[opt]|Win32
 $[T2]$[opt]|x64 = $[opt]|x64
 #end opt
 $[TAB]EndGlobalSection
 $[TAB]GlobalSection(ProjectConfigurationPlatforms) = postSolution
 #forscopes $[project_scopes]
-  #define guid $[makeguid $[TARGET]]
   #define cur_scope $[split /,$[THISSCOPENAME]]
   #define cur_leaf_scope $[word $[words $[cur_scope]],$[cur_scope]]
-  #foreach opt $[OPTIMIZATION_LEVELS_WITH_OMNI]
-    #define local_opt $[if $[eq $[opt],omni],debug,$[opt]]
-$[T2]{$[guid]}.$[opt]|Win32.ActiveCfg = $[local_opt]|Win32
+  #foreach opt $[OPTIMIZATION_LEVELS]
+$[T2]$[proj_guid_text].$[opt]|Win32.ActiveCfg = $[opt]|Win32
     #if $[not $[and $[eq $[cur_leaf_scope],test_bin_target],\
                          $[not $[BUILD_TESTS]]]]
-$[T2]{$[guid]}.$[opt]|Win32.Build.0 = $[local_opt]|Win32
+$[T2]$[proj_guid_text].$[opt]|Win32.Build.0 = $[opt]|Win32
     #endif // cur_leaf_scope != test_bin_target
-$[T2]{$[guid]}.$[opt]|x64.ActiveCfg = $[local_opt]|x64
+$[T2]$[proj_guid_text].$[opt]|x64.ActiveCfg = $[opt]|x64
     #if $[not $[and $[eq $[cur_leaf_scope],test_bin_target],\
                          $[not $[BUILD_TESTS]]]]
-$[T2]{$[guid]}.$[opt]|x64.Build.0 = $[local_opt]|x64
+$[T2]$[proj_guid_text].$[opt]|x64.Build.0 = $[opt]|x64
     #endif // cur_leaf_scope != test_bin_target
   #end opt
 #end $[project_scopes]
-#foreach opt $[OPTIMIZATION_LEVELS_WITH_OMNI]
-$[T2]$[depot_proj_guid_text].$[opt]|Win32.ActiveCfg = omni|Win32
-$[T2]$[depot_proj_guid_text].$[opt]|Win32.Build.0 = omni|Win32
-$[T2]$[depot_proj_guid_text].$[opt]|x64.ActiveCfg = omni|x64
-$[T2]$[depot_proj_guid_text].$[opt]|x64.Build.0 = omni|x64
+#foreach opt $[OPTIMIZATION_LEVELS]
+$[T2]$[depot_proj_guid_text].$[opt]|Win32.ActiveCfg = $[opt]|Win32
+$[T2]$[depot_proj_guid_text].$[opt]|Win32.Build.0 = $[opt]|Win32
+$[T2]$[depot_proj_guid_text].$[opt]|x64.ActiveCfg = $[opt]|x64
+$[T2]$[depot_proj_guid_text].$[opt]|x64.Build.0 = $[opt]|x64
 #end opt
 $[TAB]EndGlobalSection
 $[TAB]GlobalSection(SolutionProperties) = preSolution
 $[T2]HideSolutionNode = FALSE
+$[TAB]EndGlobalSection
+$[TAB]GlobalSection(NestedProjects) - preSolution
+#set possibly_nested_scopes $[unique $[possibly_nested_scopes]]
+#print possibly nested scopes '$[possibly_nested_scopes]'
+#foreach scp $[possibly_nested_scopes]
+  #define local_parent
+  #forscopes $[scp]
+    #set local_parent $[PARENTSCOPENAME]
+  #end $[scp]
+  #print Considering possibly nested scope '$[scp]', which has parent '$[local_parent]'
+  #define local_count
+  #forscopes $[local_parent]
+    #set local_count $[count_of_leaf_children]
+  #end $[local_parent]
+  #print parent of '$[scp]' has leaf count of $[local_count]
+  #if $[> $[local_count],1]
+    #forscopes $[scp]
+$[T2]$[proj_guid_text] = {$[makeguid $[local_parent]]}
+    #end $[scp]
+  #endif
+#end scp
 $[TAB]EndGlobalSection
 $[TAB]GlobalSection(ExtensibilityGlobals) = postSolution
 $[T2]VisualSVNWorkingCopyRoot = $[osfilename $[TOPDIR]]

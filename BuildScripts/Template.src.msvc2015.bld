@@ -10,7 +10,7 @@
 // processed (in order):
 //
 // The Depot.bld file in the root of the current source hierarchy
-//   (e.g. C:\o\trunk\olive\Depot.bld)
+//   (e.g. C:\personal\Platform\Depot.bld)
 // <TOOL>/Depot.bld (read by oconfig, or the Depot.bld file at the root of the current tree)
 // <TOOL>/Config.bld (included from <TOOL>/Depot.bld)
 // <TOOL>/oconfig/bldtempl/Config.<PLATFORM>.bld (included from <TOOL>/Depot.bld)
@@ -190,7 +190,7 @@
 // But before we do any of that, we pre-compute the guids for all these
 // targets.
 #forscopes lib_target bin_target test_bin_target test_lib_target noinst_bin_target
-  #define proj_guid $[makeguid $[TARGET]]
+  #define proj_guid $[makeguid $[THISSCOPENAME]/$[TARGET]]
   #define proj_guid_text {$[proj_guid]}
   // Is this an executable?
   #define is_bin $[if $[filter %bin_target,$[THISSCOPENAME]],1]

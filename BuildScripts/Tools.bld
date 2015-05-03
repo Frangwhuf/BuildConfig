@@ -35,8 +35,6 @@
 //    c 
 //  #elif $[filter %.nas,$[file]]
 //    nasm
-//  #elif $[filter %.das,$[file]]
-//    daspc
 //  #elif $[filter %.obj,$[file]]
 //    obj
 //  #elif $[filter %.h,$[file]]
@@ -91,24 +89,6 @@
 
 //////////////////////////////////////////////////////////////////////
 
-//#defun tolua_command file
-//  #if $[eq $[TOLUA_LIB_INDEX],]
-//    #defer TOLUA_LIB_INDEX 2
-//  #endif
-//
-//  $[TOLUAFRONTEND] -Q 
-//    --src=$[osfilename $[TOPDIR]/$[PATH]/$[RELTOLUASRCPATH]]
-//    --bld=$[osfilename $[ODIR]] 
-//    --lib=$[word $[TOLUA_LIB_INDEX],$[split /,$[file]]]
-//    --file=$[osfilename $[TOPDIR]/$[PATH]/$[file]]
-//    --targetdir=$[osfilename $[ODIR]/$[PATH]/$[dir $[file]]]
-//#end tolua_command
-//#defun tolua_outputs file
-//  $[osfilename $[ODIR]/$[PATH]/$[patsubst %.h,%.tolua.cpp,$[file]]]
-//#end tolua_outputs
-
-//////////////////////////////////////////////////////////////////////
-
 // perhaps put the generated .py somewhere else?
 //#defun swig_command file
 //  swig -c++ -python
@@ -125,9 +105,6 @@
 
 #defun all_custom_outputs
   #define total
-  #foreach file $[DAS_FILES]
-    #set total $[total] $[daspc_outputs $[file]]
-  #end file
   #foreach file $[CXXTEST_FILES]
     #set total $[total] $[cxxtest_outputs $[file]]
   #end file
@@ -136,9 +113,6 @@
       #set total $[total] $[nasm_outputs $[file]]
     #end file
   #endif
-  #foreach file $[TOLUA_FILES]
-    #set total $[total] $[tolua_outputs $[file]]
-  #end file
   #foreach file $[SWIG_FILES]
     #set total $[total] $[swig_outputs $[file]]
   #end file

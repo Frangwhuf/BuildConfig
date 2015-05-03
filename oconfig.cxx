@@ -43,7 +43,7 @@ usage() {
     "oconfig\n"
     "oconfig -s 'sed-command' <input >output\n"
     "\n"
-    "This is OLIVE config: a script preprocessor that scans the source\n"
+    "This is build config (oconfig): a script preprocessor that scans the source\n"
     "directory hierarchy containing the current directory, looking for\n"
     "directories that contain a file called " SOURCE_FILENAME ".  At the top of the\n"
     "directory tree must be a file called " PACKAGE_FILENAME ", which should define\n"

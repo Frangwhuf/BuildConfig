@@ -372,7 +372,7 @@ $[TAB]$[TAB]<None Include="$[osfilename $[pth]/$[fle]]"/>
 $[TAB]<ItemGroup>
   #foreach ref $[refs]
 $[TAB]$[TAB]<ProjectReference Include="$[osfilename $[TOPDIR]/$[all_libs $[PATH]/$[TARGET].vcxproj,$[ref]]]">
-$[TAB]$[TAB]$[TAB]<Project>{$[makeguid $[all_libs $[TARGET],$[ref]]]}</Project>
+$[TAB]$[TAB]$[TAB]<Project>{$[all_libs $[proj_guid],$[ref]]}</Project>
 $[TAB]$[TAB]</ProjectReference>
   #end ref
 $[TAB]</ItemGroup>
