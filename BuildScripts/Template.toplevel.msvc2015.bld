@@ -207,18 +207,15 @@ $[T2]HideSolutionNode = FALSE
 $[TAB]EndGlobalSection
 $[TAB]GlobalSection(NestedProjects) - preSolution
 #set possibly_nested_scopes $[unique $[possibly_nested_scopes]]
-#print possibly nested scopes '$[possibly_nested_scopes]'
 #foreach scp $[possibly_nested_scopes]
   #define local_parent
   #forscopes $[scp]
     #set local_parent $[PARENTSCOPENAME]
   #end $[scp]
-  #print Considering possibly nested scope '$[scp]', which has parent '$[local_parent]'
   #define local_count
   #forscopes $[local_parent]
     #set local_count $[count_of_leaf_children]
   #end $[local_parent]
-  #print parent of '$[scp]' has leaf count of $[local_count]
   #if $[> $[local_count],1]
     #forscopes $[scp]
 $[T2]$[proj_guid_text] = {$[makeguid $[local_parent]]}
