@@ -69,20 +69,12 @@ $[T2]<RootNamespace>$[DEPOT]</RootNamespace>
 $[T2]<Keyword>Win32Proj</Keyword>
 $[TAB]</PropertyGroup>
 $[TAB]<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  #foreach opt $[OPTIMIZATION_LEVELS]
-$[TAB]<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='$[opt]|Win32'" Label="Configuration">
+$[TAB]<PropertyGroup Label="Configuration">
 $[T2]<CharacterSet>Unicode</CharacterSet>
 $[T2]<ConfigurationType>Application</ConfigurationType>
 $[T2]<PlatformToolset>v140</PlatformToolset>
 $[T2]<UseDebugLibraries>false</UseDebugLibraries>
 $[TAB]</PropertyGroup>
-$[TAB]<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='$[opt]|x64'" Label="Configuration">
-$[T2]<CharacterSet>Unicode</CharacterSet>
-$[T2]<ConfigurationType>Application</ConfigurationType>
-$[T2]<PlatformToolset>v140</PlatformToolset>
-$[T2]<UseDebugLibraries>false</UseDebugLibraries>
-$[TAB]</PropertyGroup>
-  #end opt
 $[TAB]<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
 $[TAB]<ImportGroup Label="ExtensionSettings">
 $[TAB]</ImportGroup>
@@ -232,7 +224,7 @@ $[TAB]EndGlobalSection
 $[TAB]GlobalSection(SolutionProperties) = preSolution
 $[T2]HideSolutionNode = FALSE
 $[TAB]EndGlobalSection
-$[TAB]GlobalSection(NestedProjects) - preSolution
+$[TAB]GlobalSection(NestedProjects) = preSolution
 #set possibly_nested_scopes $[unique $[possibly_nested_scopes]]
 #foreach scp $[possibly_nested_scopes]
   #define local_parent
