@@ -321,7 +321,7 @@ $[TAB]$[TAB]<None Include="$[osfilename $[pth]/$[fle]]"/>
 	#end fle
   #end plat
   #foreach fle $[filter win32/%.h,$[platfiles]]
-$[TAB]$[TAb]<ClInclude Include="$[osfilename $[pth]/$[fle]]"/>
+$[TAB]$[TAB]<ClInclude Include="$[osfilename $[pth]/$[fle]]"/>
   #end fle
   #foreach fle $[filter win32/%,$[filter-out %.h,$[platfiles]]]
 $[TAB]$[TAB]<ClCompile Include="$[osfilename $[pth]/$[fle]]"/>

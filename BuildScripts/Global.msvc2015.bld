@@ -184,17 +184,8 @@ $[TAB]$[TAB]<WholeProgramOptimization Condition="'$(Configuration)'=='release'">
 $[TAB]$[TAB]<EmbedManifest>false</EmbedManifest>
 $[TAB]$[TAB]<LinkIncremental>true</LinkIncremental>
 $[TAB]$[TAB]<LinkIncremental Condition="'$(Configuration)'=='release'">false</LinkIncremental>
-$[TAB]</PropertyGroup>
-  #foreach opt $[opt_levels]
-$[TAB]<PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='$[opt]|Win32'">
 $[TAB]$[TAB]<PlatformToolset>v140</PlatformToolset>
 $[TAB]</PropertyGroup>
-  #end opt
-  #foreach opt $[opt_levels]
-$[TAB]<PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='$[opt]|x64'">
-$[TAB]$[TAB]<PlatformToolset>v140</PlatformToolset>
-$[TAB]</PropertyGroup>
-  #end opt
 #end emit_project_highlevel
 
 //
@@ -331,10 +322,12 @@ $[TAB]$[TAB]<None Include="$[osfilename $[pth]/$[fle]]"/>
 	#end fle
   #end plat
   #foreach fle $[filter win32/%.h,$[platfiles]]
-$[TAB]$[TAb]<ClInclude Include="$[osfilename $[pth]/$[fle]]"/>
+$[TAB]$[TAB]<ClInclude Include="$[osfilename $[pth]/$[fle]]"/>
   #end fle
   #foreach fle $[filter win32/%,$[filter-out %.h,$[platfiles]]]
-$[TAB]$[TAB]<ClCompile Include="$[osfilename $[pth]/$[fle]]"/>
+$[TAB]$[TAB]<ClCompile Include="$[osfilename $[pth]/$[fle]]">
+$[TAB]$[TAB]$[TAB]<ObjectFileName>$(IntDir)win32\</ObjectFileName>
+$[TAB]$[TAB]</ClCompile>
   #end fle
 #end emit_project_platforms
 
@@ -617,10 +610,7 @@ $[TAB]<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 $[TAB]<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
 $[TAB]<ImportGroup Label="ExtensionSettings">
 $[TAB]</ImportGroup>
-$[TAB]<ImportGroup Condition="'$(Platform)'=='Win32'" Label="PropertySheets">
-$[TAB]$[TAB]<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-$[TAB]</ImportGroup>
-$[TAB]<ImportGroup Condition="'$(Platform)'=='x64'" Label="PropertySheets">
+$[TAB]<ImportGroup Label="PropertySheets">
 $[TAB]$[TAB]<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
 $[TAB]</ImportGroup>
 $[TAB]<PropertyGroup Label="UserMacros" />

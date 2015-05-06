@@ -114,7 +114,7 @@
 		 $[TOPDIR]/inc
 // $[target_ipath is the proper ipath to put on the command line, from the
 // context of a particular target.
-#defer target_ipath $[unique $[complete_ipath]] $[get_ipath]
+#defer target_ipath $[unique $[complete_ipath] $[get_ipath]]
 // $[converted_ipath] is the properly-formatted version of the include path
 // for Visual Studio .NET.  The resulting list is semicolon separated and
 // uses Windows-style pathnames. Splits on + to allow for sdk style paths that
