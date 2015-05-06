@@ -416,7 +416,7 @@ $[TAB]$[TAB]</ClCompile>
 #defsub emit_filter_builds pth,files
   #foreach fle $[files]
 $[TAB]$[TAB]<None Include="$[osfilename $[pth]/$[fle]]">
-$[TAB]$[TAB]$[TAB]<Filter>$[subst /,\,$[patsubst %/,%,build/$[patsubst ./%,%,$[dir $[fle]]]]]</Filter>
+$[TAB]$[TAB]$[TAB]<Filter>$[subst /,\,$[patsubst %/,%,Build/$[patsubst ./%,%,$[dir $[fle]]]]]</Filter>
 $[TAB]$[TAB]</None>
   #end fle
 #end emit_filter_builds
@@ -427,7 +427,7 @@ $[TAB]$[TAB]</None>
 #defsub emit_filter_miscs pth,files
   #foreach fle $[files]
 $[TAB]$[TAB]<None Include="$[osfilename $[pth]/$[fle]]">
-$[TAB]$[TAB]$[TAB]<Filter>$[subst /,\,$[patsubst %/,%,misc/$[patsubst ./%,%,$[dir $[fle]]]]]</Filter>
+$[TAB]$[TAB]$[TAB]<Filter>$[subst /,\,$[patsubst %/,%,Misc/$[patsubst ./%,%,$[dir $[fle]]]]]</Filter>
 $[TAB]$[TAB]</None>
   #end fle
 #end emit_filter_miscs
@@ -438,7 +438,7 @@ $[TAB]$[TAB]</None>
 #defsub emit_filter_orphans pth,files
   #foreach fle $[files]
 $[TAB]$[TAB]<None Include="$[osfilename $[pth]/$[fle]]">
-$[TAB]$[TAB]$[TAB]<Filter>$[subst /,\,$[patsubst %/,%,orphans/$[patsubst ./%,%,$[dir $[fle]]]]]</Filter>
+$[TAB]$[TAB]$[TAB]<Filter>$[subst /,\,$[patsubst %/,%,Orphans/$[patsubst ./%,%,$[dir $[fle]]]]]</Filter>
 $[TAB]$[TAB]</None>
   #end fle
 #end emit_filter_orphans
@@ -479,13 +479,13 @@ $[TAB]$[TAB]<ClCompile Include="$[osfilename $[pth]/$[fle]]" />
     #set foo $[foo] $[patsubst %/,%,$[patsubst ./%,%,$[dir $[fle]]]]
   #end fle
   #foreach fle $[blds]
-    #set foo $[foo] $[patsubst %/,%,build/$[patsubst ./%,%,$[dir $[fle]]]]
+    #set foo $[foo] $[patsubst %/,%,Build/$[patsubst ./%,%,$[dir $[fle]]]]
   #end fle
   #foreach fle $[miscs]
-    #set foo $[foo] $[get_dir_set $[patsubst %/,%,misc/$[patsubst ./%,%,$[dir $[fle]]]]]
+    #set foo $[foo] $[get_dir_set $[patsubst %/,%,Misc/$[patsubst ./%,%,$[dir $[fle]]]]]
   #end fle
   #foreach fle $[orphs]
-    #set foo $[foo] $[patsubst %/,%,orphans/$[patsubst ./%,%,$[dir $[fle]]]]
+    #set foo $[foo] $[patsubst %/,%,Orphans/$[patsubst ./%,%,$[dir $[fle]]]]
   #end fle
   #set foo $[subst /,\,$[sort $[foo]]]
   #foreach fle $[foo]
