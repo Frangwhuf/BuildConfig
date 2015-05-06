@@ -236,7 +236,7 @@ $[TAB]<ItemGroup>
     #set final_misc_files $[filter-out $[opt]/%,$[final_misc_files]]
   #end opt
   #set final_misc_files $[filter-out %.dep,$[final_misc_files]]
-  #set final_misc_files $[filter-out $[TARGET].vcxproj%,$[final_misc_files]]
+  #set final_misc_files $[filter-out %vcxproj %vcxproj.filters %vcxproj.user,$[final_misc_files]]
   #set final_local_files $[sort $[final_local_files]]
   #call emit_project_local_inc $[TOPDIR]/$[PATH],$[filter %.h %.I,$[final_local_files]]
   #call emit_project_compilable $[TOPDIR]/$[PATH],$[filter-out %.h %.I,$[final_local_files]]

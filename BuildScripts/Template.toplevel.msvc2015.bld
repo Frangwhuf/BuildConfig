@@ -46,6 +46,7 @@
 #set autodiscover_misc_files $[filter-out $[DEPOT].vcxproj%,$[autodiscover_misc_files]]
 #set autodiscover_misc_files $[filter-out $[DEPOT].ncb,$[autodiscover_misc_files]]
 #set autodiscover_misc_files $[filter-out $[DEPOT].suo,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out $[DEPOT].sdf,$[autodiscover_misc_files]]
 
 #define depot_project_xfile $[emit_project_filename $[TOPDIR]/$[DEPOT]]
 #output $[depot_project_xfile] notouch
@@ -100,7 +101,7 @@ $[TAB]</ImportGroup>
 </Project>
 #end $[depot_project_xfile]
 
-#define depot_project_filter $[TOPDIR]/$[DEPOT].vcxproj.filter
+#define depot_project_filter $[TOPDIR]/$[DEPOT].vcxproj.filters
 #define depot_proj_build_guid $[makeguid $[DEPOT]_build]
 #define depot_proj_misc_guid $[makeguid $[DEPOT]_misc]
 #define depot_proj_orphans_guid $[makeguid $[DEPOT]_orphans]
@@ -114,12 +115,16 @@ $[TAB]<ItemGroup>
 $[T2]<Filter Include="Build">
 $[T2]$[TAB]<UniqueIdentifier>$[depot_proj_build_guid_text]</UniqueIdentifier>
 $[T2]</Filter>
+  #if $[ne $[autodiscover_misc_files],]
 $[T2]<Filter Include="Misc">
 $[T2]$[TAB]<UniqueIdentifier>$[depot_proj_misc_guid_text]</UniqueIdentifier>
 $[T2]</Filter>
+  #endif
+  #if $[ne $[ORPHANED_FILES],]
 $[T2]<Filter Include="Orphans">
 $[T2]$[TAB]<UniqueIdentifier>$[depot_proj_orphans_guid_text]</UniqueIdentifier>
 $[T2]</Filter>
+  #endif
 $[TAB]</ItemGroup>
 $[TAB]<ItemGroup>
   #foreach bfile $[depot_proj_build_files]
