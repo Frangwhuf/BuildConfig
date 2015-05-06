@@ -37,20 +37,31 @@
 #define depot_proj_guid $[makeguid $[DEPOT]]
 #define depot_proj_guid_text {$[depot_proj_guid]}
 #define depot_proj_build_files $[sort $[EXTRA_DIST] $[PACKAGE_FILENAME] $[SOURCE_FILENAME]]
+#set autodiscover_misc_files $[filter-out bin/%,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out doc/%,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out etc/%,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out inc/%,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out lib/%,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out $[DEPOT].sln,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out $[DEPOT].vcxproj%,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out $[DEPOT].ncb,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out $[DEPOT].suo,$[autodiscover_misc_files]]
 
 #define depot_project_xfile $[emit_project_filename $[TOPDIR]/$[DEPOT]]
 #output $[depot_project_xfile] notouch
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 $[TAB]<ItemGroup Label="ProjectConfigurations">
-$[T2]<ProjectConfiguration Include="omni|Win32">
-$[T2]$[TAB]<Configuration>omni</Configuration>
+  #foreach opt $[OPTIMIZATION_LEVELS]
+$[T2]<Projectconfiguration Include="$[opt]|Win32">
+$[T2]$[TAB]<Configuration>$[opt]</Configuration>
 $[T2]$[TAB]<Platform>Win32</Platform>
-$[T2]</ProjectConfiguration>
-$[T2]<ProjectConfiguration Include="omni|x64">
-$[T2]$[TAB]<Configuration>omni</Configuration>
+$[T2]</Projectconfiguration>
+$[T2]<Projectconfiguration Include="$[opt]|x64">
+$[T2]$[TAB]<Configuration>$[opt]</Configuration>
 $[T2]$[TAB]<Platform>x64</Platform>
-$[T2]</ProjectConfiguration>
+$[T2]</Projectconfiguration>
+  #end opt
 $[TAB]</ItemGroup>
 $[TAB]<PropertyGroup Label="Globals">
 $[T2]<ProjectGuid>$[depot_proj_guid_text]</ProjectGuid>
@@ -58,37 +69,38 @@ $[T2]<RootNamespace>$[DEPOT]</RootNamespace>
 $[T2]<Keyword>Win32Proj</Keyword>
 $[TAB]</PropertyGroup>
 $[TAB]<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-$[TAB]<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='omni|Win32'" Label="Configuration">
+  #foreach opt $[OPTIMIZATION_LEVELS]
+$[TAB]<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='$[opt]|Win32'" Label="Configuration">
+$[T2]<CharacterSet>Unicode</CharacterSet>
 $[T2]<ConfigurationType>Application</ConfigurationType>
 $[T2]<PlatformToolset>v140</PlatformToolset>
+$[T2]<UseDebugLibraries>false</UseDebugLibraries>
 $[TAB]</PropertyGroup>
-$[TAB]<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='omni|x64'" Label="Configuration">
+$[TAB]<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='$[opt]|x64'" Label="Configuration">
+$[T2]<CharacterSet>Unicode</CharacterSet>
 $[T2]<ConfigurationType>Application</ConfigurationType>
 $[T2]<PlatformToolset>v140</PlatformToolset>
+$[T2]<UseDebugLibraries>false</UseDebugLibraries>
 $[TAB]</PropertyGroup>
+  #end opt
 $[TAB]<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
 $[TAB]<ImportGroup Label="ExtensionSettings">
 $[TAB]</ImportGroup>
-$[TAB]<ImportGroup Condition="'$(Configuration)|$(Platform)'=='omni|Win32'" Label="PropertySheets">
-$[T2]<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-$[TAB]</ImportGroup>
-$[TAB]<ImportGroup Condition="'$(Configuration)|$(Platform)'=='omni|x64'" Label="PropertySheets">
-$[T2]<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+$[TAB]<ImportGroup Label="Shared">
 $[TAB]</ImportGroup>
 $[TAB]<PropertyGroup Label="UserMacros" />
-$[TAB]<PropertyGroup>
-$[T2]<_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
-$[TAB]</PropertyGroup>
 $[TAB]<ItemDefinitionGroup>
 $[TAB]</ItemDefinitionGroup>
 $[TAB]<ItemGroup>
   #foreach bfile $[depot_proj_build_files]
-$[T2]<CustomBuildStep Include="$[bfile]">
-$[T2]$[TAB]<FileType>Document</FileType>
-$[T2]$[TAB]<ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='omni|Win32'">true</ExcludedFromBuild>
-$[T2]$[TAB]<ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='omni|x64'">true</ExcludedFromBuild>
-$[T2]</CustomBuildStep>
+$[T2]<None Include="$[bfile]" />
   #end bfile
+  #foreach mfile $[autodiscover_misc_files]
+$[T2]<None Include="$[mfile]" />
+  #end mfile
+  #foreach ofile $[ORPHANED_FILES]
+$[T2]<None Include="$[ofile]" />
+  #end ofile
 $[TAB]</ItemGroup>
 $[TAB]<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 $[TAB]<ImportGroup Label="ExtensionTargets">
@@ -99,8 +111,10 @@ $[TAB]</ImportGroup>
 #define depot_project_filter $[TOPDIR]/$[DEPOT].vcxproj.filter
 #define depot_proj_build_guid $[makeguid $[DEPOT]_build]
 #define depot_proj_misc_guid $[makeguid $[DEPOT]_misc]
+#define depot_proj_orphans_guid $[makeguid $[DEPOT]_orphans]
 #define depot_proj_build_guid_text {$[depot_proj_build_guid]}
-#define depot_proj_misc_guid {$[depot_proj_misc_guid]}
+#define depot_proj_misc_guid_text {$[depot_proj_misc_guid]}
+#define depot_proj_orphans_guid_text {$[depot_proj_orphans_guid]}
 #output $[depot_project_filter] notouch
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -111,13 +125,26 @@ $[T2]</Filter>
 $[T2]<Filter Include="Misc">
 $[T2]$[TAB]<UniqueIdentifier>$[depot_proj_misc_guid_text]</UniqueIdentifier>
 $[T2]</Filter>
+$[T2]<Filter Include="Orphans">
+$[T2]$[TAB]<UniqueIdentifier>$[depot_proj_orphans_guid_text]</UniqueIdentifier>
+$[T2]</Filter>
 $[TAB]</ItemGroup>
 $[TAB]<ItemGroup>
   #foreach bfile $[depot_proj_build_files]
-$[T2]<CustomBuildStep Include="$[bfile]">
-$[T2]$[TAB]Filter>Build</Filter>
-$[T2]</CustomBuildStep>
+$[T2]<None Include="$[bfile]">
+$[T2]$[TAB]<Filter>Build</Filter>
+$[T2]</None>
   #end bfile
+  #foreach mfile $[autodiscover_misc_files]
+$[T2]<None Include="$[mfile]">
+$[T2]$[TAB]<Filter>Misc</Filter>
+$[T2]</None>
+  #end mfile
+  #foreach ofile $[ORPHANED_FILES]
+$[T2]<None Include="$[ofile]">
+$[T2]$[TAB]<Filter>Orphans</Filter>
+$[T2]</None>
+  #end ofile
 $[TAB]</ItemGroup>
 </Project>
 #end $[depot_project_filter]
