@@ -235,7 +235,7 @@ $[TAB]$[TAB]$[TAB]<MultiProcessorCompilation>true</MultiProcessorCompilation>
 $[TAB]$[TAB]$[TAB]<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
 $[TAB]$[TAB]$[TAB]<RuntimeLibrary Condition="'$(Configuration)'=='debug'">MultiThreadedDebugDLL</RuntimeLibrary>
 $[TAB]$[TAB]$[TAB]<AdditionalIncludeDirectories>$[ipth]</AdditionalIncludeDirectories>
-$[TAB]$[TAB]$[TAB]<DisableSpecificWarnings>4018;4127;4146;4200;4201;4244;4251;4265;4355;4480;4505;4512;4514;4521;4522;4574;4625;4626;4640;4668;4710;4800;4820;4986;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+$[TAB]$[TAB]$[TAB]<DisableSpecificWarnings>4018;4127;4146;4200;4201;4244;4251;4265;4355;4480;4505;4512;4514;4521;4522;4574;4625;4626;4640;4668;4710;4800;4820;4986;5025;5026;5027;%(DisableSpecificWarnings)</DisableSpecificWarnings>
 $[TAB]$[TAB]$[TAB]<FunctionLevelLinking>true</FunctionLevelLinking>
 $[TAB]$[TAB]$[TAB]<Optimization Condition="'$(Configuration)'=='debug'">Disabled</Optimization>
 $[TAB]$[TAB]$[TAB]<StringPooling Condition="'$(Configuration)'=='debug'">false</StringPooling>
@@ -357,6 +357,17 @@ $[TAB]$[TAB]<None Include="$[osfilename $[pth]/$[fle]]"/>
 $[TAB]$[TAB]<None Include="$[osfilename $[pth]/$[fle]]"/>
   #end fle
 #end emit_project_orphans
+
+//
+// emit etc_install files
+//
+#defsub emit_project_etc_install pth,etcinst
+  #foreach fle $[etcinst]
+$[TAB]$[TAB]<InstallDepot Include="$[osfilename $[pth]/$[fle]]">
+$[TAB]$[TAB]$[TAB]<InstallTarget>$[osfilename $[TOPDIR]/etc/$[fle]]</InstallTarget>
+$[TAB]$[TAB]</InstallDepot>
+  #end fle
+#end emit_project_etc_install
 
 //
 // emit refs to other projects

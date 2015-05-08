@@ -244,6 +244,7 @@ $[TAB]<ItemGroup>
   #call emit_project_builds $[TOPDIR]/$[PATH],$[BUILD_SYSTEM_FILES]
   #call emit_project_miscs $[TOPDIR]/$[PATH],$[final_misc_files]
   #call emit_project_orphans $[TOPDIR]/$[PATH],$[ORPHANED_FILES]
+  #call emit_project_etc_install $[TOPDIR]/$[PATH],$[ETC_INSTALL]
 $[TAB]</ItemGroup>
 $[TAB]<Target Name="InstallDepot" AfterTargets="_PrepareForBuild" Inputs="@(InstallDepot)" Outputs="@(InstallDepot->'%(InstallTarget)')">
 $[TAB]$[TAB]<Copy SourceFiles="@(InstallDepot)" DestinationFiles="@(InstallDepot->'%(InstallTarget)')" SkipUnchangedFiles="true"/>

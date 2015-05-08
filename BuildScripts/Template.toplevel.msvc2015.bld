@@ -42,11 +42,11 @@
 #set autodiscover_misc_files $[filter-out etc/%,$[autodiscover_misc_files]]
 #set autodiscover_misc_files $[filter-out inc/%,$[autodiscover_misc_files]]
 #set autodiscover_misc_files $[filter-out lib/%,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out $[DEPOT].sln,$[autodiscover_misc_files]]
+#set autodiscover_misc_files $[filter-out $[DEPOT].sln $[DEPOT].ncb $[DEPOT].suo $[DEPOT].sdf $[DEPOT].opensdf,$[autodiscover_misc_files]]
 #set autodiscover_misc_files $[filter-out $[DEPOT].vcxproj%,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out $[DEPOT].ncb,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out $[DEPOT].suo,$[autodiscover_misc_files]]
-#set autodiscover_misc_files $[filter-out $[DEPOT].sdf,$[autodiscover_misc_files]]
+#foreach opt $[OPTIMIZATION_LEVELS]
+  #set autodiscover_misc_files $[filter-out $[opt]/%,$[autodiscover_misc_files]]
+#end opt
 
 #define depot_project_xfile $[emit_project_filename $[TOPDIR]/$[DEPOT]]
 #output $[depot_project_xfile] notouch
@@ -186,8 +186,10 @@ EndProject
 	  #set possibly_nested_scopes $[possibly_nested_scopes] $[THISSCOPENAME]
 	#endif
   #endif
-  #define proj_guid $[makeguid $[THISSCOPENAME]]
-  #define proj_guid_text {$[proj_guid]}
+  #if $[ne $[THISSCOPENAME],]
+    #define proj_guid $[makeguid $[THISSCOPENAME]]
+    #define proj_guid_text {$[proj_guid]}
+  #endif
   #if $[> $[count_of_leaf_children],1]
 Project("$[project_folder_guid]") = "$[notdir $[PATH]]", "$[notdir $[PATH]]", "{$[makeguid $[THISSCOPENAME]]}"
 EndProject

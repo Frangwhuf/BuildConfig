@@ -3,4 +3,5 @@
 #begin bin_target
   #define TARGET oconfig
   #define NEED_EXCEPTIONS 1
+  #define ETC_INSTALL $[wildcard BuildScripts/*.bld]
 #end bin_target
