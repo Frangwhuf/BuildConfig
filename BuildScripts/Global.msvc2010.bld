@@ -71,20 +71,20 @@
   // /W4 will make MSVC spit out if it inlined a fn or not, but also
   // cause a lot of other spam warnings
   #define WARNING_LEVEL_FLAG /W4
-  #define EXTRA_CDEFS FORCE_INLINING $[EXTRA_CDEFS]
+  #define GLOBAL_EXTRA_CDEFS FORCE_INLINING $[GLOBAL_EXTRA_CDEFS]
 #endif
 
 #if $[BUILD_TESTS]
-  #define EXTRA_CDEFS TOOLS_UNIT_TEST $[EXTRA_CDEFS]
+  #define GLOBAL_EXTRA_CDEFS TOOLS_UNIT_TEST $[GLOBAL_EXTRA_CDEFS]
 #endif
 
 // TODO: check on the below settings and how they map into our world view
 // do NOT try to do #defer CDEFINES_OPT_DEBUG $[CDEFINES_OPT_DEBUG] here!
 // It won't let Sources.bld define their own CDEFINES_OPT_DEBUG!
 // They must use EXTRA_CDEFS!
-#defer CDEFINES_OPT_DEBUG $[if $[NO_DEBUG_CDEF],,_DEBUG] $[dlink_all_static] $[EXTRA_CDEFS]
-#defer CDEFINES_OPT_QA $[dlink_all_static] $[EXTRA_CDEFS]
-#defer CDEFINES_OPT_RELEASE NDEBUG $[dlink_all_static] $[EXTRA_CDEFS]
+#defer CDEFINES_OPT_DEBUG $[if $[NO_DEBUG_CDEF],,_DEBUG] $[dlink_all_static] $[EXTRA_CDEFS] $[GLOBAL_EXTRA_CDEFS]
+#defer CDEFINES_OPT_QA $[dlink_all_static] $[EXTRA_CDEFS] $[GLOBAL_EXTRA_CDEFS]
+#defer CDEFINES_OPT_RELEASE NDEBUG $[dlink_all_static] $[EXTRA_CDEFS] $[GLOBAL_EXTRA_CDEFS]
 
 // Opt_Debug /GZ disables OPT flags, so make sure it's OPT_DEBUG only
 #defer CFLAGS_OPT_DEBUG $[CDEFINES_OPT_DEBUG:%=/D%] $[COMMONFLAGS] $[DEBUGFLAGS] $[OPT_DEBUG_FLAGS]
@@ -113,8 +113,8 @@
 #defer EXTRA_DEFINES_GENERAL WINDOWS_PLATFORM WIN32_VC WIN32 \
                              $[if $[eq $[MFC_APP],1],,WIN32_LEAN_AND_MEAN] \
                              _STLP_USE_DYNAMIC_LIB _WINDOWS USE_DLLS \
-                             USE_MALLOC_DLL $[EXTRA_CDEFS]
-//                             USE_MALLOC_DLL _WIN32_WINNT=0x0500 $[EXTRA_CDEFS]
+                             USE_MALLOC_DLL $[EXTRA_CDEFS] $[GLOBAL_EXTRA_CDEFS]
+//                             USE_MALLOC_DLL _WIN32_WINNT=0x0500 $[EXTRA_CDEFS] $[GLOBAL_EXTRA_CDEFS]
 #defer EXTRA_DEFINES_DEBUG $[EXTRA_DEFINES_GENERAL] TOOLS_DEBUG _ITERATOR_DEBUG_LEVEL=2 _HAS_ITERATOR_DEBUGGING=1
 #defer EXTRA_DEFINES_QA $[EXTRA_DEFINES_GENERAL] INLINE_FUNCTIONS NDEBUG NPROF TOOLS_QA
 #defer EXTRA_DEFINES_RELEASE $[EXTRA_DEFINES_GENERAL] TOOLS_RELEASE INLINE_FUNCTIONS NDEBUG NPROF

@@ -32,7 +32,7 @@
 // What define variables should be passed to the compilers for each
 // value of OPTIMIZE?  Do not include -D here; that will be supplied
 // automatically.
-#defer CDEFINES_COMMON UNIX_PLATFORM $[if $[ne $[BUILD_TESTS],],TOOLS_UNIT_TEST]
+#defer CDEFINES_COMMON UNIX_PLATFORM $[if $[ne $[BUILD_TESTS],],TOOLS_UNIT_TEST] $[GLOBAL_EXTRA_CDEFS]
 #defer CDEFINES_OPT_DEBUG $[CDEFINES_COMMON] _DEBUG $[EXTRA_CDEFS]
 #defer CDEFINES_OPT_QA $[CDEFINES_COMMON] NDEBUG $[EXTRA_CDEFS]
 #defer CDEFINES_OPT_RELEASE $[CDEFINES_COMMON] NDEBUG RELEASE $[EXTRA_CDEFS]
@@ -113,7 +113,7 @@
 #endif
 
 #if $[or $[ne $[FORCE_INLINING],],$[eq $[OPTIMIZE],QA],$[eq $[OPTIMIZE],Release]]
-  #define EXTRA_CDEFS FORCE_INLINING $[EXTRA_CDEFS]
+  #define GLOBAL_EXTRA_CDEFS FORCE_INLINING $[GLOBAL_EXTRA_CDEFS]
 #endif
 
 // This variable returns the set of external packages used by this

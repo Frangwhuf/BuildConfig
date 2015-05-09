@@ -45,7 +45,7 @@
   #define LINKER_FLAGS /DEBUG /DEBUGTYPE:CV $[PROFILE_FLAG] /MAP $[MAPINFOFLAGS] /fixed:no /incremental:no /WARN:3
 
   #if $[or $[ne $[FORCE_INLINING],],$[eq $[OPTIMIZE],QA],$[eq $[OPTIMIZE],Release]
-      #define EXTRA_CDEFS FORCE_INLINING $[EXTRA_CDEFS]
+      #define GLOBAL_EXTRA_CDEFS FORCE_INLINING $[GLOBAL_EXTRA_CDEFS]
   #endif
 
   // ensure pdbs are copied to install dir
@@ -117,7 +117,7 @@
   #endif
 
   #if $[or $[ne $[FORCE_INLINING],],$[eq $[OPTIMIZE],QA],$[eq $[OPTIMIZE],Release]]
-      #defer EXTRA_CDEFS $[EXTRA_CDEFS] $[if $[OPT_MINSIZE],,FORCE_INLINING]
+      #defer GLOBAL_EXTRA_CDEFS $[GLOBAL_EXTRA_CDEFS] $[if $[OPT_MINSIZE],,FORCE_INLINING]
   #endif
 
   // Note: all Opts will link w/debug info now
@@ -164,7 +164,7 @@
   #define EXTRA_INCPATH /ia32/include
 
   #if $[or $[ne $[FORCE_INLINING],],$[eq $[OPTIMIZE],QA],$[eq $[OPTIMIZE],Release]]
-      #define EXTRA_CDEFS FORCE_INLINING $[EXTRA_CDEFS]
+      #define GLOBAL_EXTRA_CDEFS FORCE_INLINING $[GLOBAL_EXTRA_CDEFS]
   #endif
 
   // Note: all Opts will link w/debug info now

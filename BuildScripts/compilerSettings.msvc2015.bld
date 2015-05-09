@@ -41,7 +41,7 @@
 #define LINKER_FLAGS /DEBUG /DEBUGTYPE:CV $[PROFILE_FLAG] /MAP $[MAPINFOFLAGS] /fixed:no /incremental:no
 
 #if $[or $[ne $[FORCE_INLINING],],$[eq $[OPTIMIZE],QA],$[eq $[OPTIMIZE],Release]]
-  #define EXTRA_CDEFS FORCE_INLINING $[EXTRA_CDEFS]
+  #define GLOBAL_EXTRA_CDEFS FORCE_INLINING $[GLOBAL_EXTRA_CDEFS]
 #endif
 
 // ensure pdbs are copied to install dir

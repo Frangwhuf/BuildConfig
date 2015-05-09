@@ -71,16 +71,16 @@
   // /W4 will make MSVC spit out if it inlined a fn or not, but also
   // cause a lot of other spam warnings
   #define WARNING_LEVEL_FLAG /W4
-  #define EXTRA_CDEFS FORCE_INLINING $[EXTRA_CDEFS]
+  #define GLOBAL_EXTRA_CDEFS FORCE_INLINING $[GLOBAL_EXTRA_CDEFS]
 #endif
 
 // TODO: check on the below settings and how they map into our world view
 // do NOT try to do #defer CDEFINES_OPT_DEBUG $[CDEFINES_OPT_DEBUG] here!
 // It won't let Sources.bld define their own CDEFINES_OPT_DEBUG!
 // They must use EXTRA_CDEFS!
-#defer CDEFINES_OPT_DEBUG $[if $[NO_DEBUG_CDEF],,_DEBUG] $[dlink_all_static] $[EXTRA_CDEFS]
-#defer CDEFINES_OPT_QA $[dlink_all_static] $[EXTRA_CDEFS]
-#defer CDEFINES_OPT_RELEASE NDEBUG $[dlink_all_static] $[EXTRA_CDEFS]
+#defer CDEFINES_OPT_DEBUG $[if $[NO_DEBUG_CDEF],,_DEBUG] $[dlink_all_static] $[EXTRA_CDEFS] $[GLOBAL_EXTRA_CDEFS]
+#defer CDEFINES_OPT_QA $[dlink_all_static] $[EXTRA_CDEFS] $[GLOBAL_EXTRA_CDEFS]
+#defer CDEFINES_OPT_RELEASE NDEBUG $[dlink_all_static] $[EXTRA_CDEFS] $[GLOBAL_EXTRA_CDEFS]
 
 // Opt_Debug /GZ disables OPT flags, so make sure it's OPT_DEBUG only
 #defer CFLAGS_OPT_DEBUG $[CDEFINES_OPT_DEBUG:%=/D%] $[COMMONFLAGS] $[DEBUGFLAGS] $[OPT_DEBUG_FLAGS]
