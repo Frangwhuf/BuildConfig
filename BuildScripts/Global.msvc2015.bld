@@ -259,6 +259,8 @@ $[TAB]$[TAB]$[TAB]<CallingConvention Condition="'$(Configuration)'=='release'">F
 $[TAB]$[TAB]$[TAB]<AssemblerOutput Condition="'$(Configuration)'=='release'">AssemblyAndSourceCode</AssemblerOutput>
 $[TAB]$[TAB]$[TAB]<DisableSpecificWarnings Condition="'$(Configuration)'=='release'">%(DisableSpecificWarnings);4702;4711</DisableSpecificWarnings>
 $[TAB]$[TAB]$[TAB]<AdditionalOptions Condition="'$(Configuration)'=='release'">/favor:INTEL64</AdditionalOptions>
+  #print Adding /Zc:sizedDealloc- to compile options, remove it when VC 2015 RC bug is fixed
+$[TAB]$[TAB]$[TAB]<AdditionalOptions> /Zc:sizedDealloc- %(AdditionalOptions)</AdditionalOptions>
 $[TAB]$[TAB]</ClCompile>
 $[TAB]$[TAB]<Link>
 $[TAB]$[TAB]$[TAB]<TargetMachine Condition="'$(Platform)'=='x64'">MachineX64</TargetMachine>
